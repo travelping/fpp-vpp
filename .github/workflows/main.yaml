@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - "**"
+
+env:
+  REGISTRY: "registry.cennso.com"
+  IMAGE_NAME: upg/vpp-base
+  # this points to buildkitd k8s service
+  BUILDKITD_ADDR: tcp://buildkitd:1234
+
+jobs:
+  build:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        build_type: [debug, release]
+    env:
+      REGISTRY_LOGIN: ${{ secrets.REGISTRY_LOGIN }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Prepare repo
+      run: |
+        git config --global user.email "dummy@example.com"
+        git config --global user.name "dummy user"
+        hack/update-vpp.sh
+    - name: Login to the registry
+      uses: docker/login-action@v1
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.REGISTRY_LOGIN }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+    - name: Build vpp-base image
+      run: |
+        BUILD_TYPE="${{ matrix.build_type }}" hack/ci-build.sh
+        mv /tmp/_out _out
+    - name: Upload debs
+      uses: actions/upload-artifact@v2
+      with:
+        name: debs-${{ matrix.build_type }}
+        path: _out/*
+    - name: Upload image.txt
+      uses: actions/upload-artifact@v2
+      with:
+        name: image-${{ matrix.build_type }}
+        path: image-${{ matrix.build_type }}.txt
+    - name: Upload image.txt for the dev image
+      uses: actions/upload-artifact@v2
+      with:
+        name: image-dev-${{ matrix.build_type }}
+        path: image-dev-${{ matrix.build_type }}.txt
