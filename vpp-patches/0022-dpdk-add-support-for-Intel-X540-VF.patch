@@ -1,0 +1,26 @@
+From a96d0daabbeed0bc005f80ff82663637f80f01dc Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Mon, 29 Nov 2021 14:40:15 +0300
+Subject: [PATCH] dpdk: add support for Intel X540 VF
+
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/plugins/dpdk/device/init.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/plugins/dpdk/device/init.c b/src/plugins/dpdk/device/init.c
+index 19898b186..5ac1d044b 100644
+--- a/src/plugins/dpdk/device/init.c
++++ b/src/plugins/dpdk/device/init.c
+@@ -937,7 +937,7 @@ dpdk_bind_devices_to_uio (dpdk_config_main_t * conf)
+     /* all Intel QAT devices VFs */
+     else if (d->vendor_id == 0x8086 && d->device_class == PCI_CLASS_PROCESSOR_CO &&
+         (d->device_id == 0x0443 || d->device_id == 0x18a1 || d->device_id == 0x19e3 ||
+-        d->device_id == 0x37c9 || d->device_id == 0x6f55))
++        d->device_id == 0x37c9 || d->device_id == 0x6f55 || d->device_id == 0x1515))
+       ;
+     /* Cisco VIC */
+     else if (d->vendor_id == 0x1137 &&
+-- 
+2.30.2
+
