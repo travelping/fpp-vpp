@@ -1,0 +1,53 @@
+From 25b8a7dc92c0793b15ab8557863fb5871e4f1349 Mon Sep 17 00:00:00 2001
+From: Florin Coras <fcoras@cisco.com>
+Date: Tue, 6 Jul 2021 21:07:50 -0700
+Subject: [PATCH] tcp session: next node config on connects
+
+Type: improvement
+
+Signed-off-by: Florin Coras <fcoras@cisco.com>
+Change-Id: Ief06b1509d31b55efc8d1436b6ff9e01c6037a32
+---
+ src/vnet/session/transport_types.h | 10 +++++++---
+ src/vnet/tcp/tcp.c                 |  2 ++
+ 2 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/src/vnet/session/transport_types.h b/src/vnet/session/transport_types.h
+index 2caafea0f..6e789bc39 100644
+--- a/src/vnet/session/transport_types.h
++++ b/src/vnet/session/transport_types.h
+@@ -201,11 +201,15 @@ typedef enum transport_endpt_cfg_flags_
+   TRANSPORT_CFG_F_UNIDIRECTIONAL = 1 << 1,
+ } transport_endpt_cfg_flags_t;
+ 
++/* clang-format off */
+ #define foreach_transport_endpoint_cfg_fields				\
+   foreach_transport_endpoint_fields					\
+-  _(transport_endpoint_t, peer)						\
+-  _(u16, mss)								\
+-  _(u8, transport_flags)						\
++  _ (transport_endpoint_t, peer)            				\
++  _ (u32, next_node_index) 						\
++  _ (u32, next_node_opaque)						\
++  _ (u16, mss)           						\
++  _ (u8, transport_flags)						\
++/* clang-format on */
+ 
+ typedef struct transport_endpoint_pair_
+ {
+diff --git a/src/vnet/tcp/tcp.c b/src/vnet/tcp/tcp.c
+index 407ba9576..cbecffc8e 100644
+--- a/src/vnet/tcp/tcp.c
++++ b/src/vnet/tcp/tcp.c
+@@ -807,6 +807,8 @@ tcp_session_open (transport_endpoint_cfg_t * rmt)
+   /* The other connection vars will be initialized after SYN ACK */
+   tcp_connection_timers_init (tc);
+   tc->mss = rmt->mss;
++  tc->next_node_index = rmt->next_node_index;
++  tc->next_node_opaque = rmt->next_node_opaque;
+ 
+   TCP_EVT (TCP_EVT_OPEN, tc);
+   tc->state = TCP_STATE_SYN_SENT;
+-- 
+2.30.2
+
