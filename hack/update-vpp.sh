@@ -18,5 +18,5 @@ git clone -b "${VPP_BRANCH}" -n "${VPP_REPO}"
   # switch to VPP_BRANCH before creating downstream
   git checkout "${VPP_BRANCH}"
   git checkout -b downstream "${VPP_COMMIT}"
-  git am ../vpp-patches/*
+  git am ../vpp-patches/*.patch
 )

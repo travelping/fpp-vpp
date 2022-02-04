@@ -83,9 +83,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp_*.deb \
     /debs/vpp-dbg_*.deb \
     /debs/vpp-plugin-core_*.deb \
+    /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
-    /debs/vpp-api-python_*.deb \
+    /debs/python3-vpp-api_*.deb \
     /debs/vpp-dev_*.deb \
     /debs/libvppinfra-dev_*.deb && \
     apt-get clean
@@ -124,9 +125,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp_*.deb \
     /debs/vpp-dbg_*.deb \
     /debs/vpp-plugin-core_*.deb \
+    /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
-    /debs/vpp-api-python_*.deb \
+    /debs/python3-vpp-api_*.deb \
     ${extra_debs} && \
     apt-get clean
 
