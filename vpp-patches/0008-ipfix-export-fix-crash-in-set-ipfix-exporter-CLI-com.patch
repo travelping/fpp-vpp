@@ -1,0 +1,28 @@
+From 1587420ceed5325ad6d4f8f11d3e45d08ca4808d Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Fri, 18 Feb 2022 20:47:37 +0300
+Subject: [PATCH] ipfix-export: fix crash in 'set ipfix exporter' CLI command
+
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/vnet/ipfix-export/flow_report.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/vnet/ipfix-export/flow_report.c b/src/vnet/ipfix-export/flow_report.c
+index 8a36a2f33..252a5e55c 100644
+--- a/src/vnet/ipfix-export/flow_report.c
++++ b/src/vnet/ipfix-export/flow_report.c
+@@ -843,8 +843,8 @@ set_ipfix_exporter_command_fn (vlib_main_t * vm,
+ 		     "fib index %d, path MTU %u, "
+ 		     "template resend interval %us, "
+ 		     "udp checksum %s",
+-		     format_ip4_address, exp->ipfix_collector,
+-		     format_ip4_address, exp->src_address, fib_index, path_mtu,
++		     format_ip_address, &exp->ipfix_collector,
++		     format_ip_address, &exp->src_address, fib_index, path_mtu,
+ 		     template_interval, udp_checksum ? "enabled" : "disabled");
+   else
+     vlib_cli_output (vm, "IPFIX Collector is disabled");
+-- 
+2.30.2
+

@@ -1,39 +1,43 @@
-From 118f4d6f5d1c3508ff42ed147198243fcaebd634 Mon Sep 17 00:00:00 2001
-From: Andreas Schultz <andreas.schultz@travelping.com>
-Date: Mon, 16 Mar 2020 17:00:29 +0100
+From 4608217fd04fa87468c0cb7bfd0444239a63a542 Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Fri, 4 Feb 2022 19:02:09 +0300
 Subject: [PATCH] CI and build infrastructure adjustments
 
 ---
- Makefile                  | 3 +++
+ Makefile                  | 7 +++++++
  src/pkg/debian/control.in | 6 ++++--
- 2 files changed, 7 insertions(+), 2 deletions(-)
+ 2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 31d08a463..66fbacbbc 100644
+index 50f33bc89..25082ae5c 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -71,6 +71,8 @@ DEB_DEPENDS += cmake ninja-build uuid-dev python3-jsonschema python3-yaml
+@@ -71,6 +71,10 @@ DEB_DEPENDS += libffi-dev python3-ply libmbedtls-dev
+ DEB_DEPENDS += cmake ninja-build uuid-dev python3-jsonschema python3-yaml
  DEB_DEPENDS += python3-venv  # ensurepip
  DEB_DEPENDS += python3-dev   # needed for python3 -m pip install psutil
- # python3.6 on 16.04 requires python36-dev
 +DEB_DEPENDS += liburcu-dev yamllint
++ifeq ($(MACHINE),x86_64)
 +DEB_DEPENDS += libhyperscan-dev
- 
- LIBFFI=libffi6 # works on all but 20.04 and debian-testing
- 
-@@ -141,6 +143,7 @@ endif
++endif
+ DEB_DEPENDS += libnl-3-dev libnl-route-3-dev
+ DEB_DEPENDS += enchant  # for docs
+ DEB_DEPENDS += python3-virtualenv
+@@ -148,6 +152,9 @@ endif
  # +ganglia-devel if building the ganglia plugin
  
  RPM_DEPENDS += chrpath libffi-devel rpm-build
++ifeq ($(MACHINE),x86_64)
 +RPM_DEPENDS += hyperscan-devel
++endif
  
  RPM_DEPENDS_DEBUG  = glibc-debuginfo e2fsprogs-debuginfo
  RPM_DEPENDS_DEBUG += krb5-debuginfo openssl-debuginfo
 diff --git a/src/pkg/debian/control.in b/src/pkg/debian/control.in
-index ef66682f8..d47aff25b 100644
+index aa0a03473..f38444e6d 100644
 --- a/src/pkg/debian/control.in
 +++ b/src/pkg/debian/control.in
-@@ -54,7 +54,8 @@ Depends: vpp (= ${source:Version}),
+@@ -53,7 +53,8 @@ Depends: vpp (= ${source:Version}),
           libmbedtls12 | libmbedtls10,
           libmbedx509-0,
           libmbedcrypto3 | libmbedcrypto1 | libmbedcrypto0,
@@ -43,7 +47,7 @@ index ef66682f8..d47aff25b 100644
  Description: Vector Packet Processing--runtime core plugins
   This package contains VPP core plugins
   .
-@@ -62,7 +63,8 @@ Description: Vector Packet Processing--runtime core plugins
+@@ -69,7 +70,8 @@ Description: Vector Packet Processing--runtime developer tool plugins
  Package: vpp-plugin-dpdk
  Architecture: any
  Depends: vpp (= ${source:Version}),
@@ -54,5 +58,5 @@ index ef66682f8..d47aff25b 100644
   This package contains the VPP dpdk plugin
   .
 -- 
-2.28.0
+2.30.2
 

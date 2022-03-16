@@ -8,7 +8,7 @@ ENV BUILDCTL_SHA256 "b64aec46fb438ea844616b3205c33b01a3a49ea7de1f8539abd0daeb4f0
 ENV INDENT_SHA256 "12185be748db620f8f7799ea839f0d10ce643b9f5ab1805c960e56eb27941236"
 ENV LIBC_SHA256 "9a8caf9f33448a8f2f526e94d00c70cdbdd735caec510df57b3283413df7882a"
 # Go version in ppa:longsleep/golang-backports
-ENV GO_VERSION "2:1.17~1longsleep1"
+ENV GO_VERSION "2:1.18~1longsleep1"
 
 COPY vpp/Makefile /vpp-src/Makefile
 COPY vpp/build/external /vpp-src/build/external
@@ -47,7 +47,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
 
 ENV GOPATH /go
 
-RUN go get github.com/onsi/ginkgo/ginkgo && \
+RUN go install github.com/onsi/ginkgo/ginkgo@latest && \
     mv /go/bin/ginkgo /usr/local/bin
 
 FROM build-base-stage AS build-stage
@@ -83,9 +83,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp_*.deb \
     /debs/vpp-dbg_*.deb \
     /debs/vpp-plugin-core_*.deb \
+    /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
-    /debs/vpp-api-python_*.deb \
+    /debs/python3-vpp-api_*.deb \
     /debs/vpp-dev_*.deb \
     /debs/libvppinfra-dev_*.deb && \
     apt-get clean
@@ -124,9 +125,10 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp_*.deb \
     /debs/vpp-dbg_*.deb \
     /debs/vpp-plugin-core_*.deb \
+    /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
-    /debs/vpp-api-python_*.deb \
+    /debs/python3-vpp-api_*.deb \
     ${extra_debs} && \
     apt-get clean
 
