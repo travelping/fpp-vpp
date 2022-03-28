@@ -8,7 +8,7 @@ ENV BUILDCTL_SHA256 "b64aec46fb438ea844616b3205c33b01a3a49ea7de1f8539abd0daeb4f0
 ENV INDENT_SHA256 "12185be748db620f8f7799ea839f0d10ce643b9f5ab1805c960e56eb27941236"
 ENV LIBC_SHA256 "9a8caf9f33448a8f2f526e94d00c70cdbdd735caec510df57b3283413df7882a"
 # Go version in ppa:longsleep/golang-backports
-ENV GO_VERSION "2:1.18~1longsleep1"
+ENV GO_PACKAGE "golang-1.17-go"
 
 COPY vpp/Makefile /vpp-src/Makefile
 COPY vpp/build/external /vpp-src/build/external
@@ -24,7 +24,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
 	    build-essential sudo git netbase curl ca-certificates \
-            golang-go=${GO_VERSION} iproute2 gdb tcpdump iputils-ping libpcap-dev \
+            ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
             dumb-init && \
     curl -sSL "https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz" | \
     tar -xvz -C /usr/local bin/buildctl && \
@@ -43,7 +43,9 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     git tag -a v20.05-rc0 -m "dummy tag" && \
     make UNATTENDED=yes install-dep install-ext-dep && \
     apt-get clean && \
-    rm -rf /vpp-src
+    rm -rf /vpp-src && \
+    ln -s /usr/lib/go-1.17/bin/go /usr/bin/go && \
+    ln -s /usr/lib/go-1.17/bin/gofmt /usr/bin/gofmt
 
 ENV GOPATH /go
 
