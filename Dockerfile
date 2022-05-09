@@ -98,6 +98,8 @@ ADD vpp /vpp-src
 # provide symlinks needed for running the Pythonic integration tests
 RUN mkdir -p /vpp-src/build-root/build-test/src && \
     ln -fs /vpp-src/test/* /vpp-src/build-root/build-test/src/
+# fix git repo ownership issue
+RUN git config --global --add safe.directory /src
 
 # final image starts here
 FROM ubuntu:20.04 AS final-stage
