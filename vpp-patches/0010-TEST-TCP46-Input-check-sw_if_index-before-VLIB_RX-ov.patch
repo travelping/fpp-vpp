@@ -1,0 +1,79 @@
+From 6f5e8c7646ba6ef4ceae4a885bff3f93f5c62ee1 Mon Sep 17 00:00:00 2001
+From: Sergey Matov <sergey.matov@travelping.com>
+Date: Mon, 16 May 2022 12:08:38 +0400
+Subject: [PATCH] TCP46 Input: check sw_if_index before VLIB_RX override
+
+---
+ src/vnet/tcp/tcp_inlines.h |  5 ++++-
+ src/vnet/tcp/tcp_output.c  | 20 ++++++++++++++++----
+ 2 files changed, 20 insertions(+), 5 deletions(-)
+
+diff --git a/src/vnet/tcp/tcp_inlines.h b/src/vnet/tcp/tcp_inlines.h
+index d57b30590..6534fa6ba 100644
+--- a/src/vnet/tcp/tcp_inlines.h
++++ b/src/vnet/tcp/tcp_inlines.h
+@@ -239,10 +239,13 @@ tcp_input_lookup_buffer (vlib_buffer_t * b, u8 thread_index, u32 * error,
+ 
+   /* Set the sw_if_index[VLIB_RX] to the interface we received
+    * the connection on (the local interface) */
+-  vnet_buffer (b)->sw_if_index[VLIB_RX] = vnet_buffer (b)->ip.rx_sw_if_index;
+ 
+   if (is_ip4)
+     {
++      u32 fibs_len = vec_len (ip4_main.fib_index_by_sw_if_index);
++      if ((vnet_buffer (b)->ip.rx_sw_if_index != ~0) && (fibs_len > (vnet_buffer (b)->ip.rx_sw_if_index)))
++	vnet_buffer (b)->sw_if_index[VLIB_RX] = vnet_buffer (b)->ip.rx_sw_if_index;
++
+       ip4_header_t *ip4 = vlib_buffer_get_current (b);
+       int ip_hdr_bytes = ip4_header_bytes (ip4);
+       if (PREDICT_FALSE (b->current_length < ip_hdr_bytes + sizeof (*tcp)))
+diff --git a/src/vnet/tcp/tcp_output.c b/src/vnet/tcp/tcp_output.c
+index 88cd91330..080911193 100644
+--- a/src/vnet/tcp/tcp_output.c
++++ b/src/vnet/tcp/tcp_output.c
+@@ -2407,6 +2407,7 @@ tcp46_reset_inline (vlib_main_t *vm, vlib_node_runtime_t *node,
+   vlib_buffer_t *bufs[VLIB_FRAME_SIZE], **b;
+   u16 nexts[VLIB_FRAME_SIZE], *next;
+   u32 n_left_from, *from;
++  u32 fib_len;
+ 
+   from = vlib_frame_vector_args (frame);
+   n_left_from = frame->n_vectors;
+@@ -2419,11 +2420,23 @@ tcp46_reset_inline (vlib_main_t *vm, vlib_node_runtime_t *node,
+     {
+       tcp_buffer_make_reset (vm, b[0], is_ip4);
+ 
++      fib_len = vec_len (ip4_main.fib_index_by_sw_if_index);
++
++      if (fib_len <= vnet_buffer (b[0])->sw_if_index[VLIB_RX])
++	{
++	  vnet_buffer (b[0])->sw_if_index[VLIB_RX] = vec_elt
++	    (ip4_main.fib_index_by_sw_if_index, vnet_buffer (b[0])->sw_if_index[VLIB_TX]);
++	  vnet_buffer (b[0])->sw_if_index[VLIB_TX] = ~0;
++	}
++      else
++	{
++	vnet_buffer (b[0])->sw_if_index[VLIB_TX] =
++        vec_elt (ip4_main.fib_index_by_sw_if_index,
++                 vnet_buffer (b[0])->sw_if_index[VLIB_RX]);
++	}
++
+       /* IP lookup in fib where it was received. Previous value
+        * was overwritten by tcp-input */
+-      vnet_buffer (b[0])->sw_if_index[VLIB_TX] =
+-	vec_elt (ip4_main.fib_index_by_sw_if_index,
+-		 vnet_buffer (b[0])->sw_if_index[VLIB_RX]);
+ 
+       b[0]->flags |= VNET_BUFFER_F_LOCALLY_ORIGINATED;
+       next[0] = TCP_RESET_NEXT_IP_LOOKUP;
+@@ -2440,7 +2453,6 @@ tcp46_reset_inline (vlib_main_t *vm, vlib_node_runtime_t *node,
+ 
+   vlib_node_increment_counter (vm, node->node_index, TCP_ERROR_RST_SENT,
+ 			       frame->n_vectors);
+-
+   return frame->n_vectors;
+ }
+ 
+-- 
+2.32.0 (Apple Git-132)
+
