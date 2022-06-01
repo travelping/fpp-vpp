@@ -1,0 +1,51 @@
+From 77357f08ecdc60bbac6191140bf4da7f58f6648b Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Tue, 31 May 2022 11:24:12 +0400
+Subject: [PATCH] nat: fix handling checksum offload in nat44-ed
+
+Type: fix
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/plugins/nat/nat44-ed/nat44_ed.c | 24 +++++++++++++-----------
+ 1 file changed, 13 insertions(+), 11 deletions(-)
+
+diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
+index 4b5e015e6..1e2b636a3 100644
+--- a/src/plugins/nat/nat44-ed/nat44_ed.c
++++ b/src/plugins/nat/nat44-ed/nat44_ed.c
+@@ -3877,19 +3877,21 @@ nat_6t_flow_ip4_translate (snat_main_t *sm, vlib_buffer_t *b, ip4_header_t *ip,
+ 	}
+     }
+ 
+-  if (skip_saddr_rewrite)
++  if (!(b->flags & VNET_BUFFER_F_OFFLOAD) ||
++      !(vnet_buffer (b)->oflags & VNET_BUFFER_OFFLOAD_F_IP_CKSUM))
+     {
+-      ip->checksum = ip4_header_checksum (ip);
+-    }
+-  else
+-    {
+-      ip_csum_t ip_sum = ip->checksum;
+-      ip_sum = ip_csum_sub_even (ip_sum, f->l3_csum_delta);
+-      ip->checksum = ip_csum_fold (ip_sum);
++      if (skip_saddr_rewrite)
++	ip->checksum = ip4_header_checksum (ip);
++      else
++	{
++	  ip_csum_t ip_sum = ip->checksum;
++	  ip_sum = ip_csum_sub_even (ip_sum, f->l3_csum_delta);
++	  ip->checksum = ip_csum_fold (ip_sum);
++	}
++      if (0xffff == ip->checksum)
++	ip->checksum = 0;
++      ASSERT (ip4_header_checksum_is_valid (ip));
+     }
+-  if (0xffff == ip->checksum)
+-    ip->checksum = 0;
+-  ASSERT (ip4_header_checksum_is_valid (ip));
+ }
+ 
+ static_always_inline int
+-- 
+2.30.2
+
