@@ -61,12 +61,12 @@ ARG BUILD_TYPE
 
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
     case ${BUILD_TYPE} in \
-    debug) target="pkg-deb-debug";; \
-    release) target="pkg-deb";; \
+    debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
+    release) target="pkg-deb"; args="";; \
     *) echo >&2 "Bad BUILD_TYPE: ${BUILD_TYPE}";; \
     esac; \
     echo "TARGET: ${target}" && \
-    make -C /vpp-src "${target}" V=1 && \
+    make -C /vpp-src "${target}" V=1 VPP_EXTRA_CMAKE_ARGS="${args}" && \
     mkdir -p /out/debs && \
     mv /vpp-src/build-root/*.deb /out/debs
 
@@ -110,7 +110,7 @@ ENV VPP_INSTALL_SKIP_SYSCTL=1
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \
     apt-get update && apt-get dist-upgrade -yy && \
-    apt-get install --no-install-recommends -yy liblz4-tool tar gdb strace \
+    apt-get install --no-install-recommends -yy liblz4-tool tar gdb gdbserver strace \
     libhyperscan5 libmbedcrypto3 libmbedtls12 libmbedx509-0 apt-utils \
     libpython2.7-minimal libpython2-stdlib libpython3-stdlib \
     python python-cffi python-cffi-backend python-ipaddress \
