@@ -19,13 +19,12 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     apt-get update && \
     apt-get dist-upgrade -yy && \
     apt-get install -y software-properties-common && \
-    apt-get install -y clang-9 && \
     add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
 	    build-essential sudo git netbase curl ca-certificates \
             ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
-            dumb-init && \
+            dumb-init gdbserver clang-9 && \
     curl -sSL "https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz" | \
     tar -xvz -C /usr/local bin/buildctl && \
     echo "${BUILDCTL_SHA256}  /usr/local/bin/buildctl" | sha256sum -c && \
