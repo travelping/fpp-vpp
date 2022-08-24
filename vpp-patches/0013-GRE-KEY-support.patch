@@ -1,17 +1,17 @@
-From 60503ad889087f5ad24cb2b7eed944a766de1aa5 Mon Sep 17 00:00:00 2001
+From 264fc9f78d7924e9ded2b3b4d1a78382dc5bb5ee Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Thu, 23 Jun 2022 16:37:59 +0400
 Subject: [PATCH] GRE KEY support for tunnel matching
 
 ---
  src/vnet/gre/gre.api     |  2 ++
- src/vnet/gre/gre.c       | 16 +++++++++--
- src/vnet/gre/gre.h       | 38 +++++++++++++++++-------
+ src/vnet/gre/gre.c       | 16 ++++++++--
+ src/vnet/gre/gre.h       | 38 +++++++++++++++++------
  src/vnet/gre/gre_api.c   |  4 +++
- src/vnet/gre/interface.c | 23 +++++++++++----
- src/vnet/gre/node.c      | 62 +++++++++++++++++++++++++++++++++-------
- src/vnet/gre/packet.h    |  5 ++--
- 7 files changed, 120 insertions(+), 30 deletions(-)
+ src/vnet/gre/interface.c | 36 ++++++++++++---------
+ src/vnet/gre/node.c      | 67 +++++++++++++++++++++++++++++++++-------
+ src/vnet/gre/packet.h    |  5 +--
+ 7 files changed, 128 insertions(+), 40 deletions(-)
 
 diff --git a/src/vnet/gre/gre.api b/src/vnet/gre/gre.api
 index 9c69ba400..43168dec4 100644
@@ -213,7 +213,7 @@ index ea085bf0f..24a4e7781 100644
  
  static inline void
 diff --git a/src/vnet/gre/gre_api.c b/src/vnet/gre/gre_api.c
-index 3b42c76fb..c7c2a2bd6 100644
+index 59a1d3d73..0e5d2da14 100644
 --- a/src/vnet/gre/gre_api.c
 +++ b/src/vnet/gre/gre_api.c
 @@ -114,6 +114,8 @@ static void vl_api_gre_tunnel_add_del_t_handler
@@ -225,7 +225,7 @@ index 3b42c76fb..c7c2a2bd6 100644
  
    rv = vnet_gre_tunnel_add_del (a, &sw_if_index);
  
-@@ -146,6 +148,8 @@ static void send_gre_tunnel_details
+@@ -147,6 +149,8 @@ static void send_gre_tunnel_details
      rmp->tunnel.instance = htonl (t->user_instance);
      rmp->tunnel.sw_if_index = htonl (t->sw_if_index);
      rmp->tunnel.session_id = htons (t->session_id);
@@ -235,7 +235,7 @@ index 3b42c76fb..c7c2a2bd6 100644
    /* *INDENT-ON* */
  }
 diff --git a/src/vnet/gre/interface.c b/src/vnet/gre/interface.c
-index bb0be8656..b1d197301 100644
+index bb0be8656..b605367a9 100644
 --- a/src/vnet/gre/interface.c
 +++ b/src/vnet/gre/interface.c
 @@ -47,11 +47,11 @@ format_gre_tunnel (u8 * s, va_list * args)
@@ -283,35 +283,49 @@ index bb0be8656..b1d197301 100644
  }
  
  /**
-@@ -398,6 +398,8 @@ vnet_gre_tunnel_add (vnet_gre_tunnel_add_del_args_t * a,
+@@ -398,6 +398,9 @@ vnet_gre_tunnel_add (vnet_gre_tunnel_add_del_args_t * a,
    t->type = a->type;
    t->mode = a->mode;
    t->flags = a->flags;
-+  t->gre_key = a->gre_key;
 +  t->capability_flags = a->capabilities;
++  if (t->capability_flags & GRE_TUNNEL_KEYED)
++    t->gre_key = a->gre_key;
    if (t->type == GRE_TUNNEL_TYPE_ERSPAN)
      t->session_id = a->session_id;
  
-@@ -456,6 +458,9 @@ vnet_gre_tunnel_add (vnet_gre_tunnel_add_del_args_t * a,
-       hi->min_frame_size = hi->frame_overhead + 64;
-     }
+@@ -446,15 +449,14 @@ vnet_gre_tunnel_add (vnet_gre_tunnel_add_del_args_t * a,
+   gm->tunnel_index_by_sw_if_index[sw_if_index] = t_idx;
  
+   if (!is_ipv6)
+-    {
+-      hi->frame_overhead = sizeof (gre_header_t) + sizeof (ip4_header_t);
+-      hi->min_frame_size = hi->frame_overhead + 64;
+-    }
++    hi->frame_overhead = sizeof (gre_header_t) - sizeof (u32) + sizeof (ip4_header_t);
+   else
+-    {
+-      hi->frame_overhead = sizeof (gre_header_t) + sizeof (ip6_header_t);
+-      hi->min_frame_size = hi->frame_overhead + 64;
+-    }
++    hi->frame_overhead = sizeof (gre_header_t) - sizeof (u32) + sizeof (ip6_header_t);
++
 +  if (t->capability_flags & GRE_TUNNEL_KEYED)
 +    hi->frame_overhead += sizeof (u32);
 +
++  hi->min_frame_size = hi->frame_overhead + 64;
+ 
    /* Standard default gre MTU. */
    vnet_sw_interface_set_mtu (vnm, sw_if_index, 9000);
- 
-@@ -653,6 +658,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
+@@ -653,6 +655,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
    int rv;
    u8 is_add = 1;
    u32 sw_if_index;
-+  u32 key;
-+  u8 caps;
++  u32 key = 0;
++  u8 caps = 0;
    clib_error_t *error = NULL;
  
    /* Get a line of input. */
-@@ -671,6 +678,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
+@@ -671,6 +675,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
  	;
        else if (unformat (line_input, "outer-table-id %d", &outer_table_id))
  	;
@@ -320,7 +334,7 @@ index bb0be8656..b1d197301 100644
        else if (unformat (line_input, "multipoint"))
  	t_mode = TUNNEL_MODE_MP;
        else if (unformat (line_input, "teb"))
-@@ -724,6 +733,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
+@@ -724,6 +730,8 @@ create_gre_tunnel_command_fn (vlib_main_t * vm,
    a->is_ipv6 = !ip46_address_is_ip4 (&src);
    a->instance = instance;
    a->flags = flags;
@@ -330,7 +344,7 @@ index bb0be8656..b1d197301 100644
    clib_memcpy (&a->dst, &dst, sizeof (a->dst));
  
 diff --git a/src/vnet/gre/node.c b/src/vnet/gre/node.c
-index fdd3118bf..a7d73ba9a 100644
+index fdd3118bf..610ca5f5b 100644
 --- a/src/vnet/gre/node.c
 +++ b/src/vnet/gre/node.c
 @@ -159,6 +159,8 @@ gre_input (vlib_main_t * vm,
@@ -434,7 +448,24 @@ index fdd3118bf..a7d73ba9a 100644
  
        if (PREDICT_TRUE (n_left_from >= 3))
  	{
-@@ -371,6 +401,18 @@ gre_input (vlib_main_t * vm,
+@@ -341,14 +371,14 @@ gre_input (vlib_main_t * vm,
+ 	  /* ip6_local hands us the ip header, not the gre header */
+ 	  ip6[0] = vlib_buffer_get_current (b[0]);
+ 	  gre[0] = (void *) (ip6[0] + 1);
+-	  vlib_buffer_advance (b[0], sizeof (*ip6[0]) + sizeof (*gre[0]));
++	  vlib_buffer_advance (b[0], sizeof (*ip6[0]) + sizeof (*gre[0]) - sizeof (u32));
+ 	}
+       else
+ 	{
+ 	  /* ip4_local hands us the ip header, not the gre header */
+ 	  ip4[0] = vlib_buffer_get_current (b[0]);
+ 	  gre[0] = (void *) (ip4[0] + 1);
+-	  vlib_buffer_advance (b[0], sizeof (*ip4[0]) + sizeof (*gre[0]));
++	  vlib_buffer_advance (b[0], sizeof (*ip4[0]) + sizeof (*gre[0]) - sizeof (u32));
+ 	}
+ 
+       if (PREDICT_TRUE (cached_protocol == gre[0]->protocol))
+@@ -371,6 +401,19 @@ gre_input (vlib_main_t * vm,
  	: node->errors[GRE_ERROR_NONE];
  
        version[0] = clib_net_to_host_u16 (gre[0]->flags_and_version);
@@ -443,6 +474,7 @@ index fdd3118bf..a7d73ba9a 100644
 +	{
 +	  gre_key[0] = clib_net_to_host_u32 (gre[0]->key);
 +	  is_keyed[0] = 1;
++	  vlib_buffer_advance (b[0], sizeof (u32));
 +	}
 +      else
 +        {
@@ -453,7 +485,7 @@ index fdd3118bf..a7d73ba9a 100644
        version[0] &= GRE_VERSION_MASK;
  
        b[0]->error = version[0]
-@@ -384,7 +426,7 @@ gre_input (vlib_main_t * vm,
+@@ -384,7 +427,7 @@ gre_input (vlib_main_t * vm,
  	  gre_mk_key6 (&ip6[0]->dst_address,
  		       &ip6[0]->src_address,
  		       vnet_buffer (b[0])->ip.fib_index,
@@ -462,7 +494,7 @@ index fdd3118bf..a7d73ba9a 100644
  	  matched[0] = gre_match_key6 (&cached_key.gtk_v6, &key[0].gtk_v6);
  	}
        else
-@@ -392,7 +434,7 @@ gre_input (vlib_main_t * vm,
+@@ -392,7 +435,7 @@ gre_input (vlib_main_t * vm,
  	  gre_mk_key4 (ip4[0]->dst_address,
  		       ip4[0]->src_address,
  		       vnet_buffer (b[0])->ip.fib_index,
