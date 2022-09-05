@@ -1,7 +1,7 @@
-From edf87c92a6ae43eb665c551d0d29b0f868f9aef7 Mon Sep 17 00:00:00 2001
+From 5eb23794aeaa8924b46f4460f7f402dca1b8f19c Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Mon, 21 Sep 2020 19:13:15 +0300
-Subject: [PATCH] Bump scapy to v2.4.4
+Subject: [PATCH 4/7] Bump scapy to v2.4.4
 
 ---
  test/requirements-3.txt | 4 ++--
@@ -10,12 +10,12 @@ Subject: [PATCH] Bump scapy to v2.4.4
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/test/requirements-3.txt b/test/requirements-3.txt
-index 785782345..14701b691 100644
+index 2e8f17df0..ce169a32a 100644
 --- a/test/requirements-3.txt
 +++ b/test/requirements-3.txt
-@@ -372,8 +372,8 @@ requests==2.26.0 \
-     --hash=sha256:6c1246513ecd5ecd4528a0906f910e8f0f9c6b8ec72030dc9fd154dc1a6efd24 \
-     --hash=sha256:b8aa58f8cf793ffd8782d3d8cb19e66ef36f7aba4353eec859e74678b01b07a7
+@@ -398,8 +398,8 @@ requests==2.27.1 \
+     --hash=sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61 \
+     --hash=sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d
      # via sphinx
 -scapy==2.4.3 ; python_version >= "2.7" or python_version >= "3.4" \
 -    --hash=sha256:e2f8d11f6a941c14a789ae8b236b27bd634681f1b29b5e893861e284d234f6b0
@@ -25,20 +25,20 @@ index 785782345..14701b691 100644
  six==1.16.0 \
      --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
 diff --git a/test/requirements.txt b/test/requirements.txt
-index dbb2fbf6c..a9a9869a5 100644
+index a1779671e..249d7f7ea 100644
 --- a/test/requirements.txt
 +++ b/test/requirements.txt
-@@ -8,7 +8,7 @@ parameterized>=0.6.1                    # BSD
+@@ -6,7 +6,7 @@ ipaddress; python_version < '3.3'       # PSF
+ parameterized>=0.6.1                    # BSD
  pexpect                                 # ISC
  psutil                                  # BSD
- pycodestyle                             # MIT (Expat license)       https://pypi.org/project/pycodestyle/
 -scapy==2.4.3; python_version >= '2.7' or python_version >= '3.4'    # GPL2  https://github.com/secdev/scapy/blob/master/LICENSE
 +scapy==2.4.4; python_version >= '2.7' or python_version >= '3.4'    # GPL2  https://github.com/secdev/scapy/blob/master/LICENSE
  six                                     # MIT
  syslog_rfc5424_parser>=0.3.1            # ISC
  objgraph                                # MIT
 diff --git a/test/test_span.py b/test/test_span.py
-index ecefe1537..d4918c21a 100644
+index 3572d64e7..9b47d60dd 100644
 --- a/test/test_span.py
 +++ b/test/test_span.py
 @@ -3,9 +3,10 @@
@@ -54,5 +54,5 @@ index ecefe1537..d4918c21a 100644
  from framework import VppTestCase, VppTestRunner
  from util import Host, ppp
 -- 
-2.30.2
+2.32.0 (Apple Git-132)
 

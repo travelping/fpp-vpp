@@ -1,113 +1,137 @@
-From dd8e378ff5bbb26573d29024ea68f4d1010c449b Mon Sep 17 00:00:00 2001
-From: Sergey Matov <sergey.matov@travelping.com>
-Date: Mon, 23 May 2022 16:06:55 +0400
-Subject: [PATCH] Rename statseg interface
+From 1a91e3e15282f22bad9ddeb109aeba42185ae74c Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan4th@gmail.com>
+Date: Wed, 6 Jul 2022 05:03:28 +0400
+Subject: [PATCH] stats: handle interface renames properly
 
+Type: fix
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+Change-Id: I422ececeef19e7d247d8b8ea857aee553e6fbc4d
 ---
- src/vnet/interface.c         |  3 +++
- src/vnet/vnet.h              |  1 +
- src/vpp/stats/stat_segment.c | 42 ++++++++++++++++++++++++++++++++++++
- src/vpp/stats/stat_segment.h |  2 ++
- 4 files changed, 48 insertions(+)
+ src/vnet/interface.c       |  4 ++++
+ src/vnet/interface/stats.c | 53 ++++++++++++++++++++++++++++++++++------------
+ src/vnet/interface/stats.h |  9 ++++++++
+ 3 files changed, 53 insertions(+), 13 deletions(-)
+ create mode 100644 src/vnet/interface/stats.h
 
 diff --git a/src/vnet/interface.c b/src/vnet/interface.c
-index 412c6755e..6d472232f 100644
+index dd4399864f7..cce1ee559cb 100644
 --- a/src/vnet/interface.c
 +++ b/src/vnet/interface.c
-@@ -1581,6 +1581,9 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
+@@ -44,6 +44,7 @@
+ #include <vnet/ip/ip.h>
+ #include <vnet/interface/rx_queue_funcs.h>
+ #include <vnet/interface/tx_queue_funcs.h>
++#include <vnet/interface/stats.h>
+ 
+ /* *INDENT-OFF* */
+ VLIB_REGISTER_LOG_CLASS (if_default_log, static) = {
+@@ -1575,6 +1576,9 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
    vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
    vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
  
 +  /* rename statseg directory */
-+  statseg_interface_rename (hw);
++  statseg_interface_rename (vnm, hw->sw_if_index);
 +
    /* free the old name vector */
    vec_free (old_name);
  
-diff --git a/src/vnet/vnet.h b/src/vnet/vnet.h
-index 227fa5be3..1ca923cdd 100644
---- a/src/vnet/vnet.h
-+++ b/src/vnet/vnet.h
-@@ -50,6 +50,7 @@
- #include <vnet/config.h>
+diff --git a/src/vnet/interface/stats.c b/src/vnet/interface/stats.c
+index f58ffa32586..eb9f535feac 100644
+--- a/src/vnet/interface/stats.c
++++ b/src/vnet/interface/stats.c
+@@ -8,6 +8,7 @@
+ #include <vnet/vnet.h>
+ #include <vnet/devices/devices.h> /* vnet_get_aggregate_rx_packets */
  #include <vnet/interface.h>
- #include <vnet/api_errno.h>
-+#include <vpp/stats/stat_segment.h>
++#include <vnet/interface/stats.h>
  
- /* ip table add delete callback */
- typedef struct _vnet_ip_table_function_list_elt
-diff --git a/src/vpp/stats/stat_segment.c b/src/vpp/stats/stat_segment.c
-index c20ecfc6a..04154e6d6 100644
---- a/src/vpp/stats/stat_segment.c
-+++ b/src/vpp/stats/stat_segment.c
-@@ -1009,6 +1009,48 @@ statseg_config (vlib_main_t * vm, unformat_input_t * input)
+ vlib_stats_string_vector_t if_names = 0;
+ static u32 **dir_entry_indices = 0;
+@@ -22,6 +23,25 @@ static struct
+ #undef _
+ };
  
- VLIB_EARLY_CONFIG_FUNCTION (statseg_config, "statseg");
- 
-+clib_error_t *
-+statseg_interface_rename (vnet_hw_interface_t *hw)
++static u8 *
++statseg_sw_interface_name (vnet_main_t *vnm, u32 sw_if_index)
 +{
-+  u32 sw_if_index = hw->sw_if_index;
-+  stat_segment_main_t *sm = &stat_segment_main;
-+  stat_segment_directory_entry_t *ep;
-+  void *oldheap = vlib_stats_push_heap (sm->interfaces);
-+  u8 *s = 0;
-+  u8 *symlink_new_name = 0;
-+  u8 *symlink_name = 0;
-+  u32 vector_index;
++  vnet_sw_interface_t *si, *si_sup;
++  vnet_hw_interface_t *hi_sup;
++  u8 *name;
 +
-+  vlib_stat_segment_lock ();
++  si = vnet_get_sw_interface (vnm, sw_if_index);
++  si_sup = vnet_get_sup_sw_interface (vnm, si->sw_if_index);
++  ASSERT (si_sup->type == VNET_SW_INTERFACE_TYPE_HARDWARE);
++  hi_sup = vnet_get_hw_interface (vnm, si_sup->hw_if_index);
 +
-+  s = format (s, "%v%c", hw->name, '\0');
++  name = format (0, "%v", hi_sup->name);
++  if (si->type != VNET_SW_INTERFACE_TYPE_HARDWARE)
++    name = format (name, ".%d", si->sub.id);
 +
-+#define _(E, n, p)                                                      \
-+  vec_reset_length (symlink_name);                                            \
-+  symlink_name = format (symlink_name, "/interfaces/%U/" #n "%c",               \
-+                         format_vlib_stats_symlink, sm->interfaces[sw_if_index], 0);  \
-+  clib_mem_set_heap (oldheap); /* Exit stats segment */                       \
-+  vector_index = lookup_hash_index ((u8 *) symlink_name);                     \
-+  clib_mem_set_heap (sm->heap); /* Re-enter stat segment */                   \
-+  vec_reset_length (symlink_new_name);                                        \
-+  symlink_new_name = format (symlink_new_name, "/interfaces/%U/" #n "%c",       \
-+                             format_vlib_stats_symlink, s, 0);                \
-+  vlib_stats_rename_symlink (oldheap, vector_index, symlink_new_name);
-+      foreach_simple_interface_counter_name
-+        foreach_combined_interface_counter_name
-+#undef _
-+
-+  vec_free (symlink_new_name);
-+  vec_free (symlink_name);
-+  sm->interfaces[sw_if_index] = s;
-+  ep = &sm->directory_vector[STAT_COUNTER_INTERFACE_NAMES];
-+  ep->data = sm->interfaces;
-+
-+  vlib_stat_segment_unlock ();
-+  clib_mem_set_heap (oldheap);
-+  return 0;
++  return name;
 +}
 +
  static clib_error_t *
- statseg_sw_interface_add_del (vnet_main_t * vnm, u32 sw_if_index, u32 is_add)
+ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
  {
-diff --git a/src/vpp/stats/stat_segment.h b/src/vpp/stats/stat_segment.h
-index f5862a684..6878e0c41 100644
---- a/src/vpp/stats/stat_segment.h
-+++ b/src/vpp/stats/stat_segment.h
-@@ -19,6 +19,7 @@
- #include <vlib/vlib.h>
- #include <vppinfra/socket.h>
- #include <vpp/stats/stat_segment_shared.h>
-+#include <vnet/vnet.h>
+@@ -40,19 +60,7 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
  
- typedef enum
- {
-@@ -119,5 +120,6 @@ void vlib_stats_register_symlink (void *oldheap, u8 *name, u32 index1,
- 				  u32 index2, u8 lock);
+   if (is_add)
+     {
+-      vnet_sw_interface_t *si, *si_sup;
+-      vnet_hw_interface_t *hi_sup;
+-      u8 *name;
+-
+-      si = vnet_get_sw_interface (vnm, sw_if_index);
+-      si_sup = vnet_get_sup_sw_interface (vnm, si->sw_if_index);
+-      ASSERT (si_sup->type == VNET_SW_INTERFACE_TYPE_HARDWARE);
+-      hi_sup = vnet_get_hw_interface (vnm, si_sup->hw_if_index);
+-
+-      name = format (0, "%v", hi_sup->name);
+-      if (si->type != VNET_SW_INTERFACE_TYPE_HARDWARE)
+-	name = format (name, ".%d", si->sub.id);
+-
++      u8 *name = statseg_sw_interface_name (vnm, sw_if_index);
+       vlib_stats_set_string_vector (&if_names, sw_if_index, "%v", name);
  
- void stat_provider_register_vector_rate (u32 num_workers);
-+clib_error_t * statseg_interface_rename (vnet_hw_interface_t *hw);
+       for (u32 index, i = 0; i < ARRAY_LEN (if_counters); i++)
+@@ -79,3 +87,22 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
+ }
  
- #endif
+ VNET_SW_INTERFACE_ADD_DEL_FUNCTION (statseg_sw_interface_add_del);
++
++void
++statseg_interface_rename (vnet_main_t *vnm, u32 sw_if_index)
++{
++  u8 *name;
++
++  vlib_stats_segment_lock ();
++
++  name = statseg_sw_interface_name (vnm, sw_if_index);
++  vlib_stats_set_string_vector (&if_names, sw_if_index, "%v", name);
++
++  for (u32 i = 0; i < ARRAY_LEN (if_counters); i++)
++    vlib_stats_rename_symlink (dir_entry_indices[sw_if_index][i],
++			       "/interfaces/%U/%s", format_vlib_stats_symlink,
++			       name, if_counters[i].name);
++
++  vec_free (name);
++  vlib_stats_segment_unlock ();
++}
+diff --git a/src/vnet/interface/stats.h b/src/vnet/interface/stats.h
+new file mode 100644
+index 00000000000..77dd1d3f3aa
+--- /dev/null
++++ b/src/vnet/interface/stats.h
+@@ -0,0 +1,9 @@
++/* SPDX-License-Identifier: Apache-2.0
++ * Copyright(c) 2022 Cisco Systems, Inc.
++ */
++#ifndef included_vnet_interface_stats_h
++#define included_vnet_interface_stats_h
++
++void statseg_interface_rename (vnet_main_t *vnm, u32 sw_if_index);
++
++#endif
 -- 
-2.32.0 (Apple Git-132)
+2.16.6
 

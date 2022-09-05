@@ -1,7 +1,7 @@
-From 4608217fd04fa87468c0cb7bfd0444239a63a542 Mon Sep 17 00:00:00 2001
+From 5b131ab822ac404a7cc13c37b92d20f8a2a4037e Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 4 Feb 2022 19:02:09 +0300
-Subject: [PATCH] CI and build infrastructure adjustments
+Subject: [PATCH 1/7] CI and build infrastructure adjustments
 
 ---
  Makefile                  | 7 +++++++
@@ -9,20 +9,20 @@ Subject: [PATCH] CI and build infrastructure adjustments
  2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 50f33bc89..25082ae5c 100644
+index 6f5bc9be8..c5382add9 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -71,6 +71,10 @@ DEB_DEPENDS += libffi-dev python3-ply libmbedtls-dev
- DEB_DEPENDS += cmake ninja-build uuid-dev python3-jsonschema python3-yaml
- DEB_DEPENDS += python3-venv  # ensurepip
+@@ -73,6 +73,10 @@ DEB_DEPENDS += python3-venv  # ensurepip
  DEB_DEPENDS += python3-dev   # needed for python3 -m pip install psutil
+ DEB_DEPENDS += libnl-3-dev libnl-route-3-dev libmnl-dev
+ # DEB_DEPENDS += enchant  # for docs
 +DEB_DEPENDS += liburcu-dev yamllint
 +ifeq ($(MACHINE),x86_64)
 +DEB_DEPENDS += libhyperscan-dev
 +endif
- DEB_DEPENDS += libnl-3-dev libnl-route-3-dev
- DEB_DEPENDS += enchant  # for docs
  DEB_DEPENDS += python3-virtualenv
+ DEB_DEPENDS += libssl-dev
+ DEB_DEPENDS += libelf-dev # for libbpf (af_xdp)
 @@ -148,6 +152,9 @@ endif
  # +ganglia-devel if building the ganglia plugin
  
@@ -34,20 +34,20 @@ index 50f33bc89..25082ae5c 100644
  RPM_DEPENDS_DEBUG  = glibc-debuginfo e2fsprogs-debuginfo
  RPM_DEPENDS_DEBUG += krb5-debuginfo openssl-debuginfo
 diff --git a/src/pkg/debian/control.in b/src/pkg/debian/control.in
-index aa0a03473..f38444e6d 100644
+index 5f597f4ea..9293298cb 100644
 --- a/src/pkg/debian/control.in
 +++ b/src/pkg/debian/control.in
-@@ -53,7 +53,8 @@ Depends: vpp (= ${source:Version}),
-          libmbedtls12 | libmbedtls10,
-          libmbedx509-0,
-          libmbedcrypto3 | libmbedcrypto1 | libmbedcrypto0,
+@@ -50,7 +50,8 @@ Description: Vector Packet Processing--runtime libraries
+ Package: vpp-plugin-core
+ Architecture: any
+ Depends: vpp (= ${source:Version}),
 -         ${shlibs:Depends}
 +         ${shlibs:Depends},
 +         ${misc:Depends}
  Description: Vector Packet Processing--runtime core plugins
   This package contains VPP core plugins
   .
-@@ -69,7 +70,8 @@ Description: Vector Packet Processing--runtime developer tool plugins
+@@ -66,7 +67,8 @@ Description: Vector Packet Processing--runtime developer tool plugins
  Package: vpp-plugin-dpdk
  Architecture: any
  Depends: vpp (= ${source:Version}),
@@ -58,5 +58,5 @@ index aa0a03473..f38444e6d 100644
   This package contains the VPP dpdk plugin
   .
 -- 
-2.30.2
+2.32.0 (Apple Git-132)
 

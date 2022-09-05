@@ -1,45 +1,33 @@
-From 721eddf16b1829f7d67a38b24c4be53e30a04248 Mon Sep 17 00:00:00 2001
+From ac199fcd9ba16a9dc3657f8ee02c2a2c82a65417 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 23 Nov 2020 21:35:28 +0400
-Subject: [PATCH] vppinfra: Refactor sparse_vec_free
+Subject: [PATCH] vppinfra: fix memory leak in sparse_vec_free()
 
-Freeing of sparse vector does not flush header's specific
-entities. This may result to a leak.
-This commit improves vec_free logic for sparsed
-vector cleanup.
+Type: fix
 
-Type: improvement
-
-Change-Id: Ied161a4408447d57cade5266cad4e1660e967a88
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
 Signed-off-by: Sergey Matov <sergey.matov@travelping.com>
+Change-Id: I4ec1a68b7266f05ab7c543cd8207afb29e740743
 ---
- src/vppinfra/sparse_vec.h | 13 ++++++++++++-
- 1 file changed, 12 insertions(+), 1 deletion(-)
+ src/vppinfra/sparse_vec.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/vppinfra/sparse_vec.h b/src/vppinfra/sparse_vec.h
-index fc8b3cf1e..20ea858a4 100644
+index 1f57d304e..3bd440d5d 100644
 --- a/src/vppinfra/sparse_vec.h
 +++ b/src/vppinfra/sparse_vec.h
-@@ -223,7 +223,18 @@ sparse_vec_index2 (void *v,
-   *i1_return = is_member1 + d1;
- }
- 
--#define sparse_vec_free(v) vec_free(v)
-+always_inline void
-+sparse_vec_free (void *v) {
-+  sparse_vec_header_t *h;
-+
-+  if (!v)
-+    return;
-+
-+  h = sparse_vec_header (v);
-+  vec_free (h->is_member_bitmap);
-+  vec_free (h->member_counts);
-+  vec_free_h (v, sizeof (h[0]));
-+}
- 
- #define sparse_vec_elt_at_index(v,i) \
-   vec_elt_at_index ((v), sparse_vec_index ((v), (i)))
+@@ -225,7 +225,10 @@ sparse_vec_index2 (void *v,
+     {                                                                         \
+       if (V)                                                                  \
+ 	{                                                                     \
+-	  clib_mem_free (sparse_vec_header (V));                              \
++	  sparse_vec_header_t *_h = sparse_vec_header (V);                    \
++	  vec_free (_h->is_member_bitmap);                                    \
++	  vec_free (_h->member_counts);                                       \
++	  clib_mem_free (_h);                                                 \
+ 	  V = 0;                                                              \
+ 	}                                                                     \
+     }                                                                         \
 -- 
-2.30.2
+2.32.0 (Apple Git-132)
 
