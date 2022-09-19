@@ -9,7 +9,7 @@ set -o errtrace
 : ${DOCKERFILE:=}
 : ${BUILD_TYPE:=debug}
 : ${NO_PUSH:=}
-: ${IMAGE_EXPIRES_AFTER:=}
+: ${IMAGE_EXPIRES_AFTER:=7d}
 : ${TARGET_STAGE=final-stage}
 : ${DOCKERFILE="Dockerfile"}
 

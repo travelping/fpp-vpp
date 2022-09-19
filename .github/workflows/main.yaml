@@ -6,8 +6,8 @@ on:
     - "**"
 
 env:
-  REGISTRY: "registry.cennso.com"
-  IMAGE_NAME: upg/vpp-base
+  REGISTRY: "quay.io"
+  IMAGE_NAME: travelping/fpp-vpp
   # this points to buildkitd k8s service
   BUILDKITD_ADDR: tcp://buildkitd:1234
 
@@ -18,8 +18,8 @@ jobs:
       matrix:
         build_type: [debug, release]
     env:
-      REGISTRY_LOGIN: ${{ secrets.REGISTRY_LOGIN }}
-      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      QUAY_USER_ID: ${{ secrets.QUAY_USER_ID }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -28,13 +28,13 @@ jobs:
         git config --global user.email "dummy@example.com"
         git config --global user.name "dummy user"
         hack/update-vpp.sh
-    - name: Login to the registry
+    - name: Login to quay.io
       uses: docker/login-action@v1
       with:
         registry: ${{ env.REGISTRY }}
-        username: ${{ secrets.REGISTRY_LOGIN }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
-    - name: Build vpp-base image
+        username: ${{ secrets.QUAY_USER_ID }}
+        password: ${{ secrets.QUAY_TOKEN }}
+    - name: Build fpp-vpp image
       run: |
         BUILD_TYPE="${{ matrix.build_type }}" hack/ci-build.sh
         mv /tmp/_out _out
@@ -53,3 +53,12 @@ jobs:
       with:
         name: image-dev-${{ matrix.build_type }}
         path: image-dev-${{ matrix.build_type }}.txt
+
+  # dummy job for release.yaml to wait on
+  conclude:
+    runs-on: ["self-hosted"]
+    needs:
+    - build
+    steps:
+    - name: Dummy step
+      run: echo ok
