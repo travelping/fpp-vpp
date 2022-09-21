@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:experimental
-FROM ubuntu:focal AS build-base-stage
+FROM ubuntu:20.04 AS build-base-stage
 
 WORKDIR /
 
