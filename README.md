@@ -1,15 +1,42 @@
 # FPP VPP image source repository
 
-FPP-VPP, which stands for a Fast Path Provider using FDio VPP, is a base image to create applications (like User Plane Gateway - UPG)
-which process packets in userland, and the traffic intended to be handled by VPP is never handled by Linux kernel network stack at any point.
+FPP (Fast Path Provider) VPP image source repository contains code and tools to create a container image for Cennso products
+based on the [FDio VPP](https://s3-docs.fd.io/vpp/22.02/) framework. Cennso, which stands for Cloud-Enabled Network Service
+Operators, is a Travelping unique network solution concept for cloud-based network functions (CNF) and applications.
 
-This repository contains base images for UPG VPP. You can use it to download the upstream version of the `FDio/vpp` code, apply patch series from the `/vpp-patches` directory and build images.
+FPP VPP is used by these Cennso components:
 
-The repository is based on VPP with downstream patches. You can find the downstream patches needed to build the base image in the `/vpp-patches` folder. The code is available in the `vpp` directory.
+- FPP Cennso Network Core (FPP CNC), which creates high performance distributed virtual switch network to connect to
+  the Infrastructure NICs, interfaces and external Networks and interconnects the required CNFs. This enables to build solutions
+  based on fast packets processing in userland, and the traffic intended to be handled by VPP is never handled by Linux kernel
+  network stack at any point.
+- User Plane Gateway (UPG) CNF, which implementes required Mobile Core User Plane Function (UPF) features like User Plane function
+  for 2-3G GGSN GTP-U, PGW-U for 4G CUPS and UPF for 5G.
 
 The current VPP version is `stable/2202`.
 
+## Usage
+
+FPP-VPP image runs Ubuntu with the installed patched VPP version.
+Build images are stored in [this](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
+
+For the most stable FPP-VPP version, use the release images tagged with the `_release` suffix.
+Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base is in version `22.02`
+and `.1` is internal build numbering.
+
+You can use FPP-VPP as a base image to create containerized applications for packet processing. To run such applications, `startup.conf` with
+a proper configuration should be provided to be used inside container at path `/run/vpp/startup.conf`.
+
+FPP VPP can be used to build custom VPP plugin. Travelping provides such plugin implementation for UPG - [UPG-VPP](https://github.com/travelping/upg-vpp).
+UPG VPP is an out-of-tree plugin for FD.io VPP with implementation of GTP-U user plane based on 3GPP standards.
+
+Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins
+by your own.
+
 ## Development
+
+Run the `hack/update-vpp.sh` script to download FDio VPP source code to the `vpp` directory and apply downstream patches that are present
+in the `vpp-patches` folder. Next, use the `Dockerfile` to create Ubuntu-based container image with patched VPP version installed inside.
 
 ### Download sources
 
