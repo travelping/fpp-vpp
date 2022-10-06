@@ -1,0 +1,75 @@
+From 96158834db03036f9885654f198a02b68fc98830 Mon Sep 17 00:00:00 2001
+From: Pim van Pelt <pim@ipng.nl>
+Date: Fri, 3 Jun 2022 21:05:26 +0000
+Subject: [PATCH] vlib: fix crash on packet on deleted interface
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+If ip4_neighbor_probe (or any other) is sending packet to a deleted interface,
+ASSERT trips and dataplane crashes. Example:
+
+create loopback interface instance 0
+set interface ip address loop0 10.0.0.1/32
+set interface state GigabitEthernet3/0/1 up
+set interface state loop0 up
+set interface state loop0 down
+set interface ip address del loop0 10.0.0.1/32
+delete loopback interface intfc loop0
+set interface state GigabitEthernet3/0/1 down
+set interface state GigabitEthernet3/0/1 up
+comment { the following crashes VPP }
+set interface state GigabitEthernet3/0/1 down
+
+This sequence reliably crashes VPP:
+
+(gdb)p n->name
+$4 = (u8 *) 0x7fff82b47578 "interface-3-output-deleted”
+
+If the interface doesn't exist, return ~0 and be tolerant of this in the
+two call sites of counter_index()
+
+Type: fix
+Signed-off-by: Pim van Pelt <pim@ipng.nl>
+Change-Id: I90ec58fc0d14b20c9822703fe914f2ce89acb18d
+---
+ src/vlib/drop.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/vlib/drop.c b/src/vlib/drop.c
+index d025f492e..223e2204d 100644
+--- a/src/vlib/drop.c
++++ b/src/vlib/drop.c
+@@ -74,7 +74,8 @@ counter_index (vlib_main_t * vm, vlib_error_t e)
+   n = vlib_get_node (vm, ni);
+ 
+   ci = vlib_error_get_code (&vm->node_main, e);
+-  ASSERT (ci < n->n_errors);
++  if (ci >= n->n_errors)
++    return CLIB_U32_MAX;
+ 
+   ci += n->error_heap_index;
+ 
+@@ -94,7 +95,8 @@ format_error_trace (u8 * s, va_list * va)
+   error_node = vlib_get_node (vm, vlib_error_get_node (&vm->node_main, e[0]));
+   i = counter_index (vm, vlib_error_get_code (&vm->node_main, e[0])) +
+     error_node->error_heap_index;
+-  s = format (s, "%v: %s", error_node->name, em->counters_heap[i].name);
++  if (i != CLIB_U32_MAX)
++    s = format (s, "%v: %s", error_node->name, em->counters_heap[i].name);
+ 
+   return s;
+ }
+@@ -222,7 +224,8 @@ process_drop_punt (vlib_main_t * vm,
+       n_left -= count;
+ 
+       c_index = counter_index (vm, error[0]);
+-      em->counters[c_index] += count;
++      if (c_index != CLIB_U32_MAX)
++	em->counters[c_index] += count;
+ 
+       vlib_error_elog_count (vm, c_index, count);
+     }
+-- 
+2.32.0 (Apple Git-132)
+
