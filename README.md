@@ -23,11 +23,18 @@ For the most stable FPP VPP version, use the release images tagged with the `_re
 Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base version is `22.02`
 and `.1` is the internal build number.
 
-You can use FPP-VPP as a base image to create containerized applications for packet processing. To run such applications, `startup.conf` with
-a proper configuration should be provided to be used inside container at path `/run/vpp/startup.conf`.
+### Create containerized applications for packet processing
 
-FPP VPP can be used to build custom VPP plugin. Travelping provides such plugin implementation for UPG - [UPG-VPP](https://github.com/travelping/upg-vpp).
-UPG VPP is an out-of-tree plugin for FD.io VPP with implementation of GTP-U user plane based on 3GPP standards.
+You can use FPP VPP as a base image to create containerized applications for packet processing. To run such applications:
+1. Provide the `startup.conf` file with a proper configuration.
+2. Run this file inside the container at path `/run/vpp/startup.conf`.
+
+(^ not sure if it's technically correct, pls check. Also, what is "proper configuration"? 🤔 )
+
+### Build custom VPP plugins
+
+You can also use FPP VPP to build custom VPP plugins based on the patched VPP version.
+Travelping provides such a plugin for UPG called [UPG VPP](https://github.com/travelping/upg-vpp). It is an out-of-tree plugin for FD.io VPP that provides the implementation of the GTP-U user plane based on 3GPP standards.
 
 Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins.
 
@@ -46,7 +53,7 @@ hack/update-vpp.sh
 
 ### Build the base image
 
-Use `Dockerfile` to build the base image:
+Use `Dockerfile` to create Ubuntu-based container image with a patched VPP version installed inside:
 
 ```
 DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=debug -f Dockerfile -t fpp-vpp .
