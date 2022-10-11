@@ -6,23 +6,22 @@ Operators, is a Travelping unique network solution concept for cloud-based netwo
 
 FPP VPP is used by these Cennso components:
 
-- FPP Cennso Network Core (FPP CNC), which creates high performance distributed virtual switch network to connect to
-  the Infrastructure NICs, interfaces and external Networks and interconnects the required CNFs. This enables to build solutions
-  based on fast packets processing in userland, and the traffic intended to be handled by VPP is never handled by Linux kernel
-  network stack at any point.
-- User Plane Gateway (UPG) CNF, which implementes required Mobile Core User Plane Function (UPF) features like User Plane function
+- FPP Cennso Network Core (FPP CNC), which creates high-performance distributed virtual switch networks. Such networks are used to connect to
+ the infrastructure NICs, interfaces, and external networks, and they create interconnections between the required CNFs. It allows you to build solutions
+  based on fast packet processing in user space.
+- User Plane Gateway (UPG) CNF, which implements the required Mobile Core User Plane Function (UPF) features, such as User Plane function
   for 2-3G GGSN GTP-U, PGW-U for 4G CUPS and UPF for 5G.
 
 The current VPP version is `stable/2202`.
 
 ## Usage
 
-FPP-VPP image runs Ubuntu with the installed patched VPP version.
+FPP VPP image runs Ubuntu with the installed patched VPP version.
 Build images are stored in [this](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
-For the most stable FPP-VPP version, use the release images tagged with the `_release` suffix.
-Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base is in version `22.02`
-and `.1` is internal build numbering.
+For the most stable FPP VPP version, use the release images tagged with the `_release` suffix.
+Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base version is `22.02`
+and `.1` is the internal build number.
 
 You can use FPP-VPP as a base image to create containerized applications for packet processing. To run such applications, `startup.conf` with
 a proper configuration should be provided to be used inside container at path `/run/vpp/startup.conf`.
