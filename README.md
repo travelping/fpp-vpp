@@ -30,8 +30,7 @@ a proper configuration should be provided to be used inside container at path `/
 FPP VPP can be used to build custom VPP plugin. Travelping provides such plugin implementation for UPG - [UPG-VPP](https://github.com/travelping/upg-vpp).
 UPG VPP is an out-of-tree plugin for FD.io VPP with implementation of GTP-U user plane based on 3GPP standards.
 
-Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins
-by your own.
+Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins.
 
 ## Development
 
@@ -40,7 +39,7 @@ in the `vpp-patches` folder. Next, use the `Dockerfile` to create Ubuntu-based c
 
 ### Download sources
 
-To download source code and apply downstream patches, run:
+Run this script to download FDio VPP source code to the `vpp` directory and apply downstream patches stored in the `vpp-patches` folder:
 
 ```
 hack/update-vpp.sh
