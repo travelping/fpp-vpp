@@ -19,16 +19,16 @@ Build images are stored in [this](https://quay.io/repository/travelping/fpp-vpp?
 
 For the most stable FPP VPP version, use the release images tagged with the `_release` suffix.
 Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base version is `22.02`
-and `.1` is the internal build number. 
+and `.1` is the internal build number.
 
-You can use the FPP VPP images to create containerized applications for packet processing and build custom VPP plugins based on the patched VPP version.
+You can use the FPP VPP images to create containerized applications for packet processing or build custom VPP plugins based on the patched VPP version.
 
 ### Create containerized applications for packet processing
 
 You can use FPP VPP as a base image to create containerized applications for packet processing. To create such an application:
 1. Prepare a [`startup.conf` file](https://my-vpp-docs.readthedocs.io/en/latest/gettingstarted/users/configuring/startup.html) with a proper configuration.
-2. Run this file inside the container at path `/run/vpp/startup.conf`.
-
+2. Mount this file inside the container at path `/run/vpp/startup.conf`.
+3. By default container image will launch VPP using provided configuration in above step.
 
 ### Build custom VPP plugins
 
