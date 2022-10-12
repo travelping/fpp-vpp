@@ -28,7 +28,8 @@ You can use the FPP VPP images to create containerized applications for packet p
 You can use FPP VPP as a base image to create containerized applications for packet processing. To create such an application:
 1. Prepare a [`startup.conf` file](https://my-vpp-docs.readthedocs.io/en/latest/gettingstarted/users/configuring/startup.html) with a proper configuration.
 2. Mount this file inside the container at path `/run/vpp/startup.conf`.
-3. By default container image will launch VPP using provided configuration in above step.
+
+By default, the container launches VPP using configuration provided in the step above.
 
 ### Build custom VPP plugins
 
