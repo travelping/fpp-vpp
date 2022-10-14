@@ -1,27 +1,27 @@
-From 164e291a80b7e15edf8e2b09de21bb283e337280 Mon Sep 17 00:00:00 2001
+From 62c2f888f1c54844335d8bab1e3b152c1a29efdd Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Tue, 9 Nov 2021 12:27:04 +0300
-Subject: [PATCH 7/7] vnet: include fib_entry_track/fib_path/fib_walk headers
+Subject: [PATCH 05/12] vnet: include fib_entry_track/fib_path/fib_walk headers
  in dev pkg
 
 Type: fix
 
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
 ---
- src/vnet/CMakeLists.txt | 4 ++++
- 1 file changed, 4 insertions(+)
+ src/vnet/CMakeLists.txt | 2 ++
+ 1 file changed, 2 insertions(+)
 
 diff --git a/src/vnet/CMakeLists.txt b/src/vnet/CMakeLists.txt
-index 1cd5b58f8..fa3f4a9d0 100644
+index ef187dc2f..8a1133739 100644
 --- a/src/vnet/CMakeLists.txt
 +++ b/src/vnet/CMakeLists.txt
-@@ -1217,8 +1217,12 @@ list(APPEND VNET_HEADERS
+@@ -1220,10 +1220,12 @@ list(APPEND VNET_HEADERS
    fib/fib_node_list.h
    fib/fib_entry.h
    fib/fib_entry_delegate.h
 +  fib/fib_entry_track.h
-+  fib/fib_path.h
-+  fib/fib_path_list.h
+   fib/fib_path.h
+   fib/fib_path_list.h
    fib/fib_sas.h
    fib/fib_source.h
 +  fib/fib_walk.h

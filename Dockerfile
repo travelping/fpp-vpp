@@ -115,7 +115,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     python python-cffi python-cffi-backend python-ipaddress \
     python2-minimal python-ply python-pycparser python2.7 python2.7-minimal \
     python3 python3-minimal python3.6 python3-minimal \
-    python3-cffi python3-cffi-backend libnuma1
+    python3-cffi python3-cffi-backend libnuma1 libnl-3-200 libnl-route-3-200
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \

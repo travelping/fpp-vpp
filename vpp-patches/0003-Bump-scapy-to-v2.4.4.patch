@@ -1,7 +1,7 @@
-From 5eb23794aeaa8924b46f4460f7f402dca1b8f19c Mon Sep 17 00:00:00 2001
+From 68e664a128a0c6dbf039b6e428b381d7c80b579d Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Mon, 21 Sep 2020 19:13:15 +0300
-Subject: [PATCH 4/7] Bump scapy to v2.4.4
+Subject: [PATCH 03/12] Bump scapy to v2.4.4
 
 ---
  test/requirements-3.txt | 4 ++--
@@ -10,10 +10,10 @@ Subject: [PATCH 4/7] Bump scapy to v2.4.4
  3 files changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/test/requirements-3.txt b/test/requirements-3.txt
-index 2e8f17df0..ce169a32a 100644
+index 64da933f4..887d71882 100644
 --- a/test/requirements-3.txt
 +++ b/test/requirements-3.txt
-@@ -398,8 +398,8 @@ requests==2.27.1 \
+@@ -430,8 +430,8 @@ requests==2.27.1 \
      --hash=sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61 \
      --hash=sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d
      # via sphinx
@@ -25,7 +25,7 @@ index 2e8f17df0..ce169a32a 100644
  six==1.16.0 \
      --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
 diff --git a/test/requirements.txt b/test/requirements.txt
-index a1779671e..249d7f7ea 100644
+index 509fe89bd..8cc2336db 100644
 --- a/test/requirements.txt
 +++ b/test/requirements.txt
 @@ -6,7 +6,7 @@ ipaddress; python_version < '3.3'       # PSF

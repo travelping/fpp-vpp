@@ -1,20 +1,20 @@
-From 1a91e3e15282f22bad9ddeb109aeba42185ae74c Mon Sep 17 00:00:00 2001
+From 81f6d090c0d3c141b2aba3fdb42a716736f761c2 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Wed, 6 Jul 2022 05:03:28 +0400
-Subject: [PATCH] stats: handle interface renames properly
+Subject: [PATCH 08/12] stats: handle interface renames properly
 
 Type: fix
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
 Change-Id: I422ececeef19e7d247d8b8ea857aee553e6fbc4d
 ---
- src/vnet/interface.c       |  4 ++++
- src/vnet/interface/stats.c | 53 ++++++++++++++++++++++++++++++++++------------
- src/vnet/interface/stats.h |  9 ++++++++
+ src/vnet/interface.c       |  4 +++
+ src/vnet/interface/stats.c | 53 ++++++++++++++++++++++++++++----------
+ src/vnet/interface/stats.h |  9 +++++++
  3 files changed, 53 insertions(+), 13 deletions(-)
  create mode 100644 src/vnet/interface/stats.h
 
 diff --git a/src/vnet/interface.c b/src/vnet/interface.c
-index dd4399864f7..cce1ee559cb 100644
+index dd4399864..cce1ee559 100644
 --- a/src/vnet/interface.c
 +++ b/src/vnet/interface.c
 @@ -44,6 +44,7 @@
@@ -36,7 +36,7 @@ index dd4399864f7..cce1ee559cb 100644
    vec_free (old_name);
  
 diff --git a/src/vnet/interface/stats.c b/src/vnet/interface/stats.c
-index f58ffa32586..eb9f535feac 100644
+index f58ffa325..eb9f535fe 100644
 --- a/src/vnet/interface/stats.c
 +++ b/src/vnet/interface/stats.c
 @@ -8,6 +8,7 @@
@@ -119,7 +119,7 @@ index f58ffa32586..eb9f535feac 100644
 +}
 diff --git a/src/vnet/interface/stats.h b/src/vnet/interface/stats.h
 new file mode 100644
-index 00000000000..77dd1d3f3aa
+index 000000000..77dd1d3f3
 --- /dev/null
 +++ b/src/vnet/interface/stats.h
 @@ -0,0 +1,9 @@
@@ -133,5 +133,5 @@ index 00000000000..77dd1d3f3aa
 +
 +#endif
 -- 
-2.16.6
+2.32.0 (Apple Git-132)
 

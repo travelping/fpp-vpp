@@ -1,7 +1,7 @@
-From 3088f27d7c62b70e27d102b55e16fc7bdc401081 Mon Sep 17 00:00:00 2001
+From 6b62a8f7a7a18e839a591a4c9f1c619acc8188f7 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Wed, 28 Sep 2022 10:57:13 +0500
-Subject: [PATCH] Revert "devices: add tx trace for af-packet"
+Subject: [PATCH 11/12] Revert "devices: add tx trace for af-packet"
 
 This reverts commit 9deb2ec335925e02c4e98065b374144b9acda11a.
 ---
@@ -9,7 +9,7 @@ This reverts commit 9deb2ec335925e02c4e98065b374144b9acda11a.
  1 file changed, 6 insertions(+), 87 deletions(-)
 
 diff --git a/src/vnet/devices/af_packet/device.c b/src/vnet/devices/af_packet/device.c
-index 1e177f625..925e24c34 100644
+index 74bc1c8c4..934c7e89d 100644
 --- a/src/vnet/devices/af_packet/device.c
 +++ b/src/vnet/devices/af_packet/device.c
 @@ -56,16 +56,6 @@ static char *af_packet_tx_func_error_strings[] = {

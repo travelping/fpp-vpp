@@ -1,7 +1,7 @@
-From 30631a637428f44ee0864e322760276e64d19c0a Mon Sep 17 00:00:00 2001
+From 226c51ad14ad747bdb8e742d32f35379e0b0fda7 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 14 Feb 2022 11:08:33 +0400
-Subject: [PATCH] Controlled CG-NAT function
+Subject: [PATCH 06/12] Controlled CG-NAT function
 
 ---
  src/plugins/nat/nat44-ed/nat44_ed.c         | 180 ++++++++++++++++++++
@@ -13,7 +13,7 @@ Subject: [PATCH] Controlled CG-NAT function
  6 files changed, 434 insertions(+), 2 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index 9c797536f..7fb5ea1ad 100644
+index 2e4c791ef..56dfe4556 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
 @@ -2428,6 +2428,7 @@ VLIB_INIT_FUNCTION (nat_init);
@@ -213,7 +213,7 @@ index 9c797536f..7fb5ea1ad 100644
  int
  nat44_ed_del_addresses ()
  {
-@@ -3258,6 +3435,9 @@ nat44_ed_worker_db_init (snat_main_per_thread_data_t *tsm, u32 translations,
+@@ -3256,6 +3433,9 @@ nat44_ed_worker_db_init (snat_main_per_thread_data_t *tsm, u32 translations,
    pool_get (tsm->lru_pool, head);
    tsm->unk_proto_lru_head_index = head - tsm->lru_pool;
    clib_dlist_init (tsm->lru_pool, tsm->unk_proto_lru_head_index);
@@ -224,10 +224,10 @@ index 9c797536f..7fb5ea1ad 100644
  
  static void
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.h b/src/plugins/nat/nat44-ed/nat44_ed.h
-index 5b5b2ec8c..e69e11344 100644
+index 6c64c7540..13aa34230 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.h
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.h
-@@ -146,6 +146,8 @@ typedef enum
+@@ -151,6 +151,8 @@ typedef enum
    NAT44_ED_TCP_N_STATE,
  } nat44_ed_tcp_state_e;
  
@@ -236,7 +236,7 @@ index 5b5b2ec8c..e69e11344 100644
  format_function_t format_ed_session_kvp;
  format_function_t format_snat_session;
  format_function_t format_snat_static_mapping;
-@@ -179,6 +181,16 @@ format_function_t format_nat44_ed_tcp_state;
+@@ -184,6 +186,16 @@ format_function_t format_nat44_ed_tcp_state;
  #define NAT_SM_FLAG_LB		   (1 << 7)
  #define NAT_SM_FLAG_SWITCH_ADDRESS (1 << 8)
  
@@ -253,7 +253,7 @@ index 5b5b2ec8c..e69e11344 100644
  typedef CLIB_PACKED(struct
  {
    // number of sessions in this vrf
-@@ -332,6 +344,8 @@ typedef CLIB_PACKED(struct
+@@ -337,6 +349,8 @@ typedef CLIB_PACKED(struct
    u32 per_vrf_sessions_index;
  
    u32 thread_index;
@@ -262,7 +262,7 @@ index 5b5b2ec8c..e69e11344 100644
  }) snat_session_t;
  
  typedef struct
-@@ -466,6 +480,9 @@ typedef struct
+@@ -471,6 +485,9 @@ typedef struct
  
    per_vrf_sessions_t *per_vrf_sessions_vec;
  
@@ -272,7 +272,7 @@ index 5b5b2ec8c..e69e11344 100644
  } snat_main_per_thread_data_t;
  
  struct snat_main_s;
-@@ -650,6 +667,14 @@ typedef struct snat_main_s
+@@ -655,6 +672,14 @@ typedef struct snat_main_s
    nat44_ed_tcp_state_e tcp_state_change_table[NAT44_ED_TCP_N_STATE]
  					     [NAT44_ED_N_DIR]
  					     [NAT44_ED_TCP_N_FLAG];
@@ -287,7 +287,7 @@ index 5b5b2ec8c..e69e11344 100644
  } snat_main_t;
  
  typedef struct
-@@ -935,6 +960,26 @@ int nat44_ed_set_frame_queue_nelts (u32 frame_queue_nelts);
+@@ -940,6 +965,26 @@ int nat44_ed_set_frame_queue_nelts (u32 frame_queue_nelts);
  
  void nat_6t_l3_l4_csum_calc (nat_6t_flow_t *f);
  
@@ -441,7 +441,7 @@ index ee3e925e5..4a9418f52 100644
  format_ed_session_kvp (u8 *s, va_list *args)
  {
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 179405e72..bdce66b8f 100644
+index 61ce70f35..118ac7bcf 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 @@ -96,6 +96,62 @@ format_nat_in2out_ed_trace (u8 * s, va_list * args)
@@ -507,7 +507,7 @@ index 179405e72..bdce66b8f 100644
  static int
  nat_ed_alloc_addr_and_port_with_snat_address (
    snat_main_t *sm, u8 proto, u32 thread_index, snat_address_t *a,
-@@ -468,7 +524,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -469,7 +525,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
        is_sm = 1;
      }
  
@@ -516,7 +516,7 @@ index 179405e72..bdce66b8f 100644
      {
        if (PREDICT_FALSE (!tcp_flags_is_init (
  	    vnet_buffer (b)->ip.reass.icmp_type_or_tcp_flags)))
-@@ -515,7 +571,22 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -516,7 +572,22 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
  	}
        nat_6t_flow_txfib_rewrite_set (&s->o2i, rx_fib_index);
  

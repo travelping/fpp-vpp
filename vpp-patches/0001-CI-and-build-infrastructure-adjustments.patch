@@ -1,7 +1,7 @@
-From 5b131ab822ac404a7cc13c37b92d20f8a2a4037e Mon Sep 17 00:00:00 2001
+From 47910bb0f01760a5a87f076bac08e8f52faf37ca Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 4 Feb 2022 19:02:09 +0300
-Subject: [PATCH 1/7] CI and build infrastructure adjustments
+Subject: [PATCH 01/12] CI and build infrastructure adjustments
 
 ---
  Makefile                  | 7 +++++++
@@ -9,11 +9,11 @@ Subject: [PATCH 1/7] CI and build infrastructure adjustments
  2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 6f5bc9be8..c5382add9 100644
+index 4d3ba7578..2e2480130 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -73,6 +73,10 @@ DEB_DEPENDS += python3-venv  # ensurepip
- DEB_DEPENDS += python3-dev   # needed for python3 -m pip install psutil
+ DEB_DEPENDS += python3-dev python3-pip
  DEB_DEPENDS += libnl-3-dev libnl-route-3-dev libmnl-dev
  # DEB_DEPENDS += enchant  # for docs
 +DEB_DEPENDS += liburcu-dev yamllint
@@ -23,7 +23,7 @@ index 6f5bc9be8..c5382add9 100644
  DEB_DEPENDS += python3-virtualenv
  DEB_DEPENDS += libssl-dev
  DEB_DEPENDS += libelf-dev # for libbpf (af_xdp)
-@@ -148,6 +152,9 @@ endif
+@@ -155,6 +159,9 @@ endif
  # +ganglia-devel if building the ganglia plugin
  
  RPM_DEPENDS += chrpath libffi-devel rpm-build
