@@ -1,0 +1,24 @@
+From ebf04980e7146e000f28ae9616a9a5a7e8b7e3b9 Mon Sep 17 00:00:00 2001
+From: Sergey Matov <sergey.matov@travelping.com>
+Date: Fri, 14 Oct 2022 15:49:49 +0400
+Subject: [PATCH] PAPI: add socket import to provider
+
+---
+ test/vpp_papi_provider.py | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/test/vpp_papi_provider.py b/test/vpp_papi_provider.py
+index db2b32e1d..e98bad2b6 100644
+--- a/test/vpp_papi_provider.py
++++ b/test/vpp_papi_provider.py
+@@ -8,6 +8,7 @@
+ import os
+ import time
+ import queue
++import socket
+ from six import moves, iteritems
+ from config import config
+ from vpp_papi import VPPApiClient
+-- 
+2.32.0 (Apple Git-132)
+
