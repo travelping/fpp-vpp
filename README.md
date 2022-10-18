@@ -10,13 +10,13 @@ FPP VPP is used by these Cennso components:
 
 ### FPP Cennso Network Core
 
-FPP Cennso Network Core (FPP CNC), which creates high-performance distributed virtual switch networks:
+FPP Cennso Network Core (FPP CNC) enables high-performance distributed virtual switch networks through the following features:
 
 - Memif interfaces used to connect VPP-based workloads
-- VPP's fast tap driver is used to connect pods with Linux networking
+- VPP's fast tap driver that connect Linux networking workloads
 - Infrastructure NICs are used to create overlay networking for interconnections between the required CNFs
 - Allows to build solutions based on fast packet processing in user space
-- Integrates with Kubernetes CNI and CPU Manager
+- Integration with Kubernetes CNI and CPU Manager
 
 ### UPG
 
@@ -50,7 +50,7 @@ By default, the container launches VPP using configuration provided in the step 
 ### Build custom VPP plugins
 
 You can also use FPP VPP to build custom VPP plugins based on the patched VPP version.
-Travelping provides such a plugin for UPG called [UPG VPP](https://github.com/travelping/upg-vpp). It is an out-of-tree plugin for FD.io VPP that provides the implementation of the GTP-U user plane based on 3GPP standards.
+Travelping provides such a plugin for the UPG CNF called [UPG VPP](https://github.com/travelping/upg-vpp). It is an out-of-tree plugin for FD.io VPP that provides the implementation of the GTP-U user plane based on 3GPP standards.
 
 Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins.
 
