@@ -12,10 +12,10 @@ FPP VPP is used by these Cennso components:
 
 FPP Cennso Network Core (FPP CNC) enables high-performance distributed virtual switch networks through the following features:
 
-- Memif interfaces used to connect VPP-based workloads
+- `memif` interfaces that connects VPP-based workloads
 - VPP's fast tap driver that connect Linux networking workloads
+- This allows to build solutions based on fast packet processing in user space
 - Infrastructure NICs are used to create overlay networking for interconnections between the required CNFs
-- Allows to build solutions based on fast packet processing in user space
 - Integration with Kubernetes CNI and CPU Manager
 
 ### UPG
@@ -29,7 +29,7 @@ User Plane Gateway (UPG) CNF, which implements the required Mobile Core User Pla
 ## Usage
 
 FPP VPP image runs Ubuntu with the installed patched VPP version. The current VPP version used by FPP VPP is `stable/2202`.
-Build images are stored in [this](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
+Build images are stored in [Travelping's quay](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
 ### Build versioning
 
@@ -75,7 +75,7 @@ To add another patch to FPP VPP follow the steps:
 1. Create a patch using git command: `git format-patch -N -1 HEAD`
 1. Add resulting patch to `vpp-patches/` folder
 1. Resulting patch can be committed to FPP VPP repo
-1. To test the patch, you can build FPP VPP image (see next section) and run modified VPP in a container
+1. To test the patch, you can build FPP VPP image (see [next section](#build-the-base-image)) and run modified VPP in a container
 
 ### Build the base image
 
@@ -84,33 +84,37 @@ To add another patch to FPP VPP follow the steps:
 > You need to prepare VPP source code before building FPP VPP image.
 > Make sure that `vpp` folder is present by running `hack/update-vpp.sh` first.
 
-Use `Dockerfile` to create Ubuntu-based container image with a patched VPP version installed inside:
+[`Dockerfile`](./Dockerfile) provided in this repo creates four types of build images:
+
+- `release` - optimized build with proper performance, but without debug tools (like `gdb`)
+- `debug` - does not provide optimal performance, but enables easier analyzes with `gdb` and also provides
+  more debug log information
+- `dev_release` - development image including tools to build VPP plugin, used for building `release` image with this plugin
+- `dev_debug` - development image including tools to build VPP plugin, used for building `debug` image with this plugin
+
+The type of image build is defined with `BUILD_TYPE` argument passed to `docker build`.
+Possible options are `debug` or `release`. This parameter is required during container build.
+
+To build release FPP VPP image with a patched VPP version installed inside:
 
 ```console
-$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=debug -f Dockerfile -t fpp-vpp:latest_debug .
+$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_release .
 ```
 
-### Local image with upg-vpp
+`BUILD_TYPE` can be set to `debug` in above command to get debug image. `latest_release` tag was applied above
+to distinguish release or debug builds.
 
-To integrate locally built VPP with [UPG VPP](https://github.com/travelping/upg-vpp):
-1. Build `latest-debug` image from above step
-2. Build additional image called `latest_dev_debug`:
+### Build dev images
+
+In order to support building VPP plugins using FPP VPP base image, [`Dockerfile`](./Dockerfile) provided in this repo
+includes build target called `dev-stage`. This target includes source headers needed to build VPP plugin.
+
+To build release FPP VPP image with development tools included:
 
 ```console
-$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=debug -f Dockerfile -t fpp-vpp:latest_dev_debug . --target dev-stage
+$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_dev_release . --target dev-stage
 ```
 
-3. Clone the [UPG VPP](https://github.com/travelping/upg-vpp) repository
-4. After building above 2 images locally, modify [upg-vpp/vpp.spec](https://github.com/travelping/upg-vpp/blob/master/vpp.spec) with:
-
-```
-VPP_IMAGE_BASE=fpp-vpp:latest
-```
-
-5. Run in `upg-vpp` directory:
-
-```console
-$ make image
-```
-
-The result will be a UPG VPP image `upg:debug`
+`latest_dev_release` image tag was applied to distinguish between release image that runs modified VPP from
+development image used to build VPP plugins. `dev_release` image is required to build VPP plugin with resulting
+`release` type of image.
