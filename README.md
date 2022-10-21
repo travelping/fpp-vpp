@@ -1,26 +1,12 @@
 # FPP VPP image source repository
 
-FPP (Fast Path Provider) VPP image source repository contains code and tools to create a container image for Cennso products
-based on the [FD.io VPP](https://s3-docs.fd.io/vpp/22.02/) framework. Cennso, which stands for Cloud-Enabled Network Service
-Operators, is a Travelping unique network solution concept for cloud-based network functions (CNF) and applications.
+FPP (Fast Path Provider) VPP image source repository contains code with [FD.io VPP](https://s3-docs.fd.io/vpp/22.02/)
+patches and tools to create a container image running a modified version of VPP.
 
-## FPP VPP in Cennso components
+## FPP VPP in UPG-VPP
 
-FPP VPP is used by these Cennso components:
-
-### FPP Cennso Network Core
-
-FPP Cennso Network Core (FPP CNC) enables high-performance distributed virtual switch networks through the following features:
-
-- `memif` interfaces that connects VPP-based workloads
-- VPP's fast tap driver that connect Linux networking workloads
-- This allows to build solutions based on fast packet processing in user space
-- Infrastructure NICs are used to create overlay networking for interconnections between the required CNFs
-- Integration with Kubernetes CNI and CPU Manager
-
-### UPG
-
-User Plane Gateway (UPG) CNF, which implements the required Mobile Core User Plane Function (UPF) features:
+User Plane Gateway ([UPG-VPP](https://github.com/travelping/upg-vpp)) CNF uses FPP VPP with its patched VPP version,
+to implement the required Mobile Core User Plane Function (UPF) features:
 
 - User Plane Function (UPF) in 5G networks
 - Packet Data Network Gateway User plane (PGW-U)
@@ -28,31 +14,38 @@ User Plane Gateway (UPG) CNF, which implements the required Mobile Core User Pla
 
 ## Usage
 
-FPP VPP image runs Ubuntu with the installed patched VPP version. The current VPP version used by FPP VPP is `stable/2202`.
+FPP VPP provides a [Dockerfile](./Dockerfile) that creates an Ubuntu image with the installed patched VPP version.
+FPP VPP is currently based on VPP version `stable/2202`.
+
 Build images are stored in [Travelping's quay](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
 ### Build versioning
 
 For the most stable FPP VPP version, use the release images tagged with the `v22.02.1_release` naming schema.
-Image tagging uses the following convention: `v<vpp-release>.<internal-build>`, for example `v22.02.1` means that VPP base version is `22.02`
-and `.1` is the internal build number.
+Image tagging uses the following convention: `v<vpp-release>.<internal-build>`.
 
-You can use the FPP VPP images to create containerized applications for packet processing or build custom VPP plugins based on the patched VPP version.
+`v22.02.1` means that the VPP base version is `22.02`, and `.1` is the internal build number.
 
-### Create containerized applications for packet processing
+You can use the FPP VPP images to create containerized applications for packet processing or build custom VPP plugins
+based on the patched VPP version.
 
-You can use FPP VPP as a base image to create containerized applications for packet processing. To create such an application:
-1. Prepare a [`startup.conf` file](https://my-vpp-docs.readthedocs.io/en/latest/gettingstarted/users/configuring/startup.html) with a proper configuration.
-2. Mount this file inside the container at path `/run/vpp/startup.conf`.
+### Run built image
 
-By default, the container launches VPP using configuration provided in the step above.
+> **Warning**
+>
+> It may be required to enable HugePages on local machine to run VPP.
+> To do so, run on `sysctl vm.nr_hugepages=2000`, this allocates 2000 hugepages of size 2M
 
-### Build custom VPP plugins
+To simply run the FPP VPP image using docker:
 
-You can also use FPP VPP to build custom VPP plugins based on the patched VPP version.
-Travelping provides such a plugin for the UPG CNF called [UPG VPP](https://github.com/travelping/upg-vpp). It is an out-of-tree plugin for FD.io VPP that provides the implementation of the GTP-U user plane based on 3GPP standards.
+```console
+$ docker run -it --rm --privileged --entrypoint /usr/bin/vpp quay.io/travelping/fpp-vpp:v22.02.1_release unix { nodaemon interactive } api-segment { prefix vpp1 } cpu { workers 0 } heapsize 2G
+```
 
-Read the official [VPP documentation](https://fdio-vpp.readthedocs.io/en/latest/gettingstarted/developers/add_plugin.html) to learn how to develop VPP plugins.
+This will run the FPP VPP container on a local machine, giving access to VPP CLI (`vppctl`). You can play with available commands,
+see [VPP CLI docs](https://s3-docs.fd.io/vpp/22.02/cli-reference/gettingstarted/index.html) for reference.
+
+For more information, see the [VPP tutorial](https://s3-docs.fd.io/vpp/22.02/gettingstarted/progressivevpp/index.html).
 
 ## Development
 
@@ -66,16 +59,19 @@ Run this script to download FD.io VPP source code to the `vpp` directory and app
 hack/update-vpp.sh
 ```
 
-### Add new patch
+### Contribute
+
+To add new functionality or fix an encountered issue in VPP code base, you can develop the required extension/fix in VPP C code,
+create a patch and commit it to FPP-VPP repo.
 
 To add another patch to FPP VPP follow the steps:
 
-1. Run `hack/update-vpp.sh` to download sources and downstream patches stored in `vpp-patches` folder
-1. Develop the code in `vpp/` directory provided by above point, commit the output
-1. Create a patch using git command: `git format-patch -N -1 HEAD`
+1. Run `hack/update-app.sh` to download sources and downstream patches stored in a `vpp-patches` folder
+1. Develop the code in `vpp/` directory provided by the above point, commit the output to git
+1. Create a patch using the git command: `git format-patch -N -1 HEAD`
 1. Add resulting patch to `vpp-patches/` folder
-1. Resulting patch can be committed to FPP VPP repo
-1. To test the patch, you can build FPP VPP image (see [next section](#build-the-base-image)) and run modified VPP in a container
+1. The resulting patch can be committed to the FPP VPP repo
+1. To test the patch, you can build an FPP VPP image (see [next section](#build-the-base-image)) and run a modified VPP in a container
 
 ### Build the base image
 
@@ -95,19 +91,18 @@ To add another patch to FPP VPP follow the steps:
 The type of image build is defined with `BUILD_TYPE` argument passed to `docker build`.
 Possible options are `debug` or `release`. This parameter is required during container build.
 
-To build release FPP VPP image with a patched VPP version installed inside:
+To build a release FPP VPP image with a patched VPP version installed inside:
 
 ```console
 $ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_release .
 ```
 
-`BUILD_TYPE` can be set to `debug` in above command to get debug image. `latest_release` tag was applied above
+`BUILD_TYPE` can be set to `debug` in the above command to get debug image. `latest_release` tag was applied above
 to distinguish release or debug builds.
 
 ### Build dev images
-
-In order to support building VPP plugins using FPP VPP base image, [`Dockerfile`](./Dockerfile) provided in this repo
-includes build target called `dev-stage`. This target includes source headers needed to build VPP plugin.
+To support building VPP plugins using FPP VPP base image, [`Dockerfile`](./Dockerfile) provided in this repo includes
+a build target called `dev-stage`. This target includes source headers needed to build the VPP plugin.
 
 To build release FPP VPP image with development tools included:
 
@@ -115,6 +110,6 @@ To build release FPP VPP image with development tools included:
 $ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_dev_release . --target dev-stage
 ```
 
-`latest_dev_release` image tag was applied to distinguish between release image that runs modified VPP from
-development image used to build VPP plugins. `dev_release` image is required to build VPP plugin with resulting
-`release` type of image.
+`latest_dev_release` image tag was applied to distinguish between the release image that runs modified VPP and
+the development image used to build VPP plugins. `dev_release` image is required to build the VPP plugin with
+the resulting `release` type of image.
