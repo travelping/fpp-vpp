@@ -73,14 +73,14 @@ To add a patch to FPP VPP, follow these steps:
 
 [`Dockerfile`](./Dockerfile) provided in this repository creates four types of build images:
 
-- `release` - optimized build with proper performance, but without debug tools (like `gdb`)
-- `debug` - does not provide optimal performance, but enables easier analyzes with `gdb` and also provides
+- `release` - optimized build with proper performance but without debug tools like `gdb`
+- `debug` - does not provide optimal performance but allows for easier analyzes with `gdb` and also provides
   more debug log information
-- `dev_release` - development image including tools to build VPP plugin, used for building `release` image with this plugin
-- `dev_debug` - development image including tools to build VPP plugin, used for building `debug` image with this plugin
+- `dev_release` - development image that includes tools to build a VPP plugin, used for building a `release` image with this plugin
+- `dev_debug` - development image that includes tools to build a VPP plugin, used for building a `debug` image with this plugin
 
 The type of image build is defined with `BUILD_TYPE` argument passed to `docker build`.
-Possible options are `debug` or `release`. This parameter is required during container build.
+The possible options are `debug` or `release`. This parameter is required during the container build.
 
 To build a release FPP VPP image with a patched VPP version installed inside, run:
 
@@ -88,11 +88,12 @@ To build a release FPP VPP image with a patched VPP version installed inside, ru
 $ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_release .
 ```
 
-`BUILD_TYPE` can be set to `debug` in the above command to get debug image. `latest_release` tag was applied above
+You can set `BUILD_TYPE` to `debug` in the above command to get debug image. `latest_release` tag was applied above
 to distinguish release or debug builds.
 
 ### Build dev images
-To support building VPP plugins using FPP VPP base image, [`Dockerfile`](./Dockerfile) provided in this repo includes
+
+To support building VPP plugins using FPP VPP base image, the [`Dockerfile`](./Dockerfile) includes
 a build target called `dev-stage`. This target includes source headers needed to build the VPP plugin.
 
 To build release FPP VPP image with development tools included, run:
