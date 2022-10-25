@@ -17,9 +17,6 @@ FPP VPP is currently based on VPP version `stable/2202`.
 
 Build images are stored in the [Travelping's quay](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
-You can use FPP VPP images to create containerized applications for packet processing or build custom VPP plugins
-based on the patched VPP version.
-
 ### Build versioning
 
 For the most stable FPP VPP version, use the release images tagged with the `v22.02.1_release` naming schema.
