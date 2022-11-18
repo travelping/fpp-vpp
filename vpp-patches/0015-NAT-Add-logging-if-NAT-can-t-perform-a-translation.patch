@@ -1,0 +1,60 @@
+From a8030397cc8c503a6f3402fd4d4c99cacb75bdde Mon Sep 17 00:00:00 2001
+From: Sergey Matov <sergey.matov@travelping.com>
+Date: Fri, 18 Nov 2022 15:43:00 +0400
+Subject: [PATCH] [NAT] Add logging if NAT can't perform a translation
+
+Also, don't allocate binding if NAT plugin is not enabled.
+---
+ src/plugins/nat/nat44-ed/nat44_ed.c        | 5 ++++-
+ src/plugins/nat/nat44-ed/nat44_ed_in2out.c | 5 ++++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
+index 1e2b636a3..cf43ad9b4 100644
+--- a/src/plugins/nat/nat44-ed/nat44_ed.c
++++ b/src/plugins/nat/nat44-ed/nat44_ed.c
+@@ -2313,7 +2313,7 @@ nat_init (vlib_main_t * vm)
+ 
+   nat44_set_node_indexes (sm, vm);
+ 
+-  sm->log_class = vlib_log_register_class ("nat", 0);
++  sm->log_class = vlib_log_register_class_rate_limit ("nat", 0, 1);
+   nat_ipfix_logging_init (vm);
+ 
+   nat_init_simple_counter (sm->total_sessions, "total-sessions",
+@@ -2597,6 +2597,9 @@ nat_ed_create_binding (ip4_address_t user_addr, ip4_address_t ext_addr,
+   snat_main_per_thread_data_t *tsm = &sm->per_thread_data[0];
+   u16 start_block;
+ 
++  if (!sm->enabled)
++    return 0;
++
+   start_block =
+     nat_ed_add_binding (tsm, user_addr, ext_addr, min_port, block_size);
+ 
+diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
+index 4b3969bdb..e2eefa1f5 100644
+--- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
++++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
+@@ -211,6 +211,9 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
+   while (attempts > 0);
+ 
+   /* Totally out of translations to use... */
++  nat_log_warn ("Out of ports for binding %U:%u-%u",
++		format_ip4_address, &bn->external_addr,
++		bn->start_port, bn->end_port);
+   return 1;
+ }
+ 
+@@ -464,7 +467,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+ 	  b->error = node->errors[NAT_IN2OUT_ED_ERROR_MAX_SESSIONS_EXCEEDED];
+ 	  nat_ipfix_logging_max_sessions (thread_index,
+ 					  sm->max_translations_per_thread);
+-	  nat_elog_notice (sm, "maximum sessions exceeded");
++	  nat_log_warn ("maximum sessions exceeded");
+ 	  return NAT_NEXT_DROP;
+ 	}
+     }
+-- 
+2.32.0 (Apple Git-132)
+
