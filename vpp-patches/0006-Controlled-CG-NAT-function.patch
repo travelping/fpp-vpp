@@ -1,56 +1,22 @@
-From 4af6a2e258c5dbec50fa0a9725d98e7e6b5a5291 Mon Sep 17 00:00:00 2001
+From 226c51ad14ad747bdb8e742d32f35379e0b0fda7 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 14 Feb 2022 11:08:33 +0400
-Subject: [PATCH] Controlled CG-NAT function
+Subject: [PATCH 06/12] Controlled CG-NAT function
 
 ---
- src/plugins/nat/nat44-ed/nat44_ed.c         | 208 ++++++++++++++++++++
- src/plugins/nat/nat44-ed/nat44_ed.h         |  44 +++++
- src/plugins/nat/nat44-ed/nat44_ed_cli.c     |  69 +++++++
- src/plugins/nat/nat44-ed/nat44_ed_in2out.c  |  79 +++++++-
- src/plugins/nat/nat44-ed/nat44_ed_inlines.h |  39 ++++
- 5 files changed, 437 insertions(+), 2 deletions(-)
+ src/plugins/nat/nat44-ed/nat44_ed.c         | 180 ++++++++++++++++++++
+ src/plugins/nat/nat44-ed/nat44_ed.h         |  45 +++++
+ src/plugins/nat/nat44-ed/nat44_ed_cli.c     |  69 ++++++++
+ src/plugins/nat/nat44-ed/nat44_ed_format.c  |  28 +++
+ src/plugins/nat/nat44-ed/nat44_ed_in2out.c  |  75 +++++++-
+ src/plugins/nat/nat44-ed/nat44_ed_inlines.h |  39 +++++
+ 6 files changed, 434 insertions(+), 2 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index d3ef3d54f..4b5e015e6 100644
+index 2e4c791ef..56dfe4556 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
-@@ -193,6 +193,34 @@ static int nat44_ed_del_static_mapping_internal (ip4_address_t l_addr,
- 
- u32 nat_calc_bihash_buckets (u32 n_elts);
- 
-+u8 *
-+format_binding_key (u8 * s, va_list * args)
-+{
-+  u64 key = va_arg (*args, u64);
-+
-+  ip4_address_t addr;
-+  u16 s_port;
-+  u16 e_port;
-+
-+  split_binding_key (key, &addr, &s_port, &e_port);
-+
-+  s = format (s, "%U start_port %d end_port %d",
-+              format_ip4_address, &addr,
-+              clib_net_to_host_u16 (s_port), clib_net_to_host_u16 (e_port));
-+  return s;
-+}
-+
-+u8 *
-+format_binding_mapping_kvp (u8 * s, va_list * args)
-+{
-+  clib_bihash_kv_8_8_t *v = va_arg (*args, clib_bihash_kv_8_8_t *);
-+
-+  s = format (s, "%U binding-mapping-index %llu",
-+              format_binding_key, v->key, v->value);
-+
-+  return s;
-+}
-+
- u8 *
- format_ed_session_kvp (u8 * s, va_list * args)
- {
-@@ -2362,6 +2390,7 @@ VLIB_INIT_FUNCTION (nat_init);
+@@ -2428,6 +2428,7 @@ VLIB_INIT_FUNCTION (nat_init);
  int
  nat44_plugin_enable (nat44_config_t c)
  {
@@ -58,7 +24,7 @@ index d3ef3d54f..4b5e015e6 100644
    snat_main_t *sm = &snat_main;
  
    fail_if_enabled ();
-@@ -2420,12 +2449,188 @@ nat44_plugin_enable (nat44_config_t c)
+@@ -2492,12 +2493,188 @@ nat44_plugin_enable (nat44_config_t c)
  	}
      }
  
@@ -247,7 +213,7 @@ index d3ef3d54f..4b5e015e6 100644
  int
  nat44_ed_del_addresses ()
  {
-@@ -3179,6 +3384,9 @@ nat44_ed_worker_db_init (snat_main_per_thread_data_t *tsm, u32 translations,
+@@ -3256,6 +3433,9 @@ nat44_ed_worker_db_init (snat_main_per_thread_data_t *tsm, u32 translations,
    pool_get (tsm->lru_pool, head);
    tsm->unk_proto_lru_head_index = head - tsm->lru_pool;
    clib_dlist_init (tsm->lru_pool, tsm->unk_proto_lru_head_index);
@@ -258,10 +224,19 @@ index d3ef3d54f..4b5e015e6 100644
  
  static void
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.h b/src/plugins/nat/nat44-ed/nat44_ed.h
-index 9772f1ec7..ced6d793e 100644
+index 6c64c7540..13aa34230 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.h
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.h
-@@ -195,6 +195,16 @@ typedef enum
+@@ -151,6 +151,8 @@ typedef enum
+   NAT44_ED_TCP_N_STATE,
+ } nat44_ed_tcp_state_e;
+ 
++format_function_t format_binding_key;
++format_function_t format_binding_mapping_kvp;
+ format_function_t format_ed_session_kvp;
+ format_function_t format_snat_session;
+ format_function_t format_snat_static_mapping;
+@@ -184,6 +186,16 @@ format_function_t format_nat44_ed_tcp_state;
  #define NAT_SM_FLAG_LB		   (1 << 7)
  #define NAT_SM_FLAG_SWITCH_ADDRESS (1 << 8)
  
@@ -278,7 +253,7 @@ index 9772f1ec7..ced6d793e 100644
  typedef CLIB_PACKED(struct
  {
    // number of sessions in this vrf
-@@ -350,6 +360,8 @@ typedef CLIB_PACKED(struct
+@@ -337,6 +349,8 @@ typedef CLIB_PACKED(struct
    u32 per_vrf_sessions_index;
  
    u32 thread_index;
@@ -287,7 +262,7 @@ index 9772f1ec7..ced6d793e 100644
  }) snat_session_t;
  
  typedef struct
-@@ -496,6 +508,9 @@ typedef struct
+@@ -471,6 +485,9 @@ typedef struct
  
    per_vrf_sessions_t *per_vrf_sessions_vec;
  
@@ -297,10 +272,10 @@ index 9772f1ec7..ced6d793e 100644
  } snat_main_per_thread_data_t;
  
  struct snat_main_s;
-@@ -666,6 +681,14 @@ typedef struct snat_main_s
-   /* nat44 plugin enabled */
-   u8 enabled;
- 
+@@ -655,6 +672,14 @@ typedef struct snat_main_s
+   nat44_ed_tcp_state_e tcp_state_change_table[NAT44_ED_TCP_N_STATE]
+ 					     [NAT44_ED_N_DIR]
+ 					     [NAT44_ED_TCP_N_FLAG];
 +  /* Find a nat binding by external */
 +  clib_bihash_8_8_t binding_mapping_by_external;
 +  /* UPG: Controlled NAT function */
@@ -309,20 +284,12 @@ index 9772f1ec7..ced6d793e 100644
 +  /* Controlled NAT hook for IPFIX */
 +  void (*nat44_ed_controlled_report_src_port) (vlib_buffer_t *, u16 port);
 +
-   vnet_main_t *vnet_main;
- 
  } snat_main_t;
-@@ -703,6 +726,7 @@ extern fib_source_t nat_fib_src_hi;
- extern fib_source_t nat_fib_src_low;
  
- /* format functions */
-+format_function_t format_binding_key;
- format_function_t format_snat_static_mapping;
- format_function_t format_snat_static_map_to_resolve;
- format_function_t format_snat_session;
-@@ -1028,6 +1052,26 @@ format_function_t format_nat_ed_translation_error;
- format_function_t format_nat_6t_flow;
- format_function_t format_ed_session_kvp;
+ typedef struct
+@@ -940,6 +965,26 @@ int nat44_ed_set_frame_queue_nelts (u32 frame_queue_nelts);
+ 
+ void nat_6t_l3_l4_csum_calc (nat_6t_flow_t *f);
  
 +snat_binding_t* nat_ed_get_binding (snat_main_per_thread_data_t * tsm,
 +                                 ip4_address_t addr);
@@ -348,10 +315,10 @@ index 9772f1ec7..ced6d793e 100644
  					       ip4_address_t addr, u16 port,
  					       u32 fib_index, u8 proto);
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_cli.c b/src/plugins/nat/nat44-ed/nat44_ed_cli.c
-index cfd362786..e359ad7fb 100644
+index cde3d7334..f9e6e7744 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_cli.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_cli.c
-@@ -1707,6 +1707,61 @@ done:
+@@ -1838,6 +1838,61 @@ done:
    return error;
  }
  
@@ -413,7 +380,7 @@ index cfd362786..e359ad7fb 100644
  /*?
   * @cliexpar
   * @cliexstart{nat44}
-@@ -2161,6 +2216,20 @@ VLIB_CLI_COMMAND (snat_forwarding_set_command, static) = {
+@@ -2332,6 +2387,20 @@ VLIB_CLI_COMMAND (snat_forwarding_set_command, static) = {
    .function = snat_forwarding_set_command_fn,
  };
  
@@ -434,12 +401,51 @@ index cfd362786..e359ad7fb 100644
  /*
   * fd.io coding-style-patch-verification: ON
   *
+diff --git a/src/plugins/nat/nat44-ed/nat44_ed_format.c b/src/plugins/nat/nat44-ed/nat44_ed_format.c
+index ee3e925e5..4a9418f52 100644
+--- a/src/plugins/nat/nat44-ed/nat44_ed_format.c
++++ b/src/plugins/nat/nat44-ed/nat44_ed_format.c
+@@ -16,6 +16,34 @@
+ #include <nat/nat44-ed/nat44_ed.h>
+ #include <nat/nat44-ed/nat44_ed_inlines.h>
+ 
++u8 *
++format_binding_key (u8 * s, va_list * args)
++{
++  u64 key = va_arg (*args, u64);
++
++  ip4_address_t addr;
++  u16 s_port;
++  u16 e_port;
++
++  split_binding_key (key, &addr, &s_port, &e_port);
++
++  s = format (s, "%U start_port %d end_port %d",
++              format_ip4_address, &addr,
++              clib_net_to_host_u16 (s_port), clib_net_to_host_u16 (e_port));
++  return s;
++}
++
++u8 *
++format_binding_mapping_kvp (u8 * s, va_list * args)
++{
++  clib_bihash_kv_8_8_t *v = va_arg (*args, clib_bihash_kv_8_8_t *);
++
++  s = format (s, "%U binding-mapping-index %llu",
++              format_binding_key, v->key, v->value);
++
++  return s;
++}
++
+ u8 *
+ format_ed_session_kvp (u8 *s, va_list *args)
+ {
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 23e0957da..4b3969bdb 100644
+index 61ce70f35..118ac7bcf 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-@@ -158,6 +158,62 @@ snat_not_translate_fast (snat_main_t *sm, vlib_node_runtime_t *node,
-   return 1;
+@@ -96,6 +96,62 @@ format_nat_in2out_ed_trace (u8 * s, va_list * args)
+   return s;
  }
  
 +static int
@@ -501,18 +507,7 @@ index 23e0957da..4b3969bdb 100644
  static int
  nat_ed_alloc_addr_and_port_with_snat_address (
    snat_main_t *sm, u8 proto, u32 thread_index, snat_address_t *a,
-@@ -428,6 +484,10 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
-       break;
-     }
- 
-+  /* Controlled NAT: we expect ingress traffic to stay in same FIB */
-+  if (sm->controlled)
-+    outside_fib_index = rx_fib_index;
-+
-   ip4_address_t sm_addr;
-   u16 sm_port;
-   u32 sm_fib_index;
-@@ -449,7 +509,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -469,7 +525,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
        is_sm = 1;
      }
  
@@ -521,7 +516,7 @@ index 23e0957da..4b3969bdb 100644
      {
        if (PREDICT_FALSE (!tcp_flags_is_init (
  	    vnet_buffer (b)->ip.reass.icmp_type_or_tcp_flags)))
-@@ -493,7 +553,22 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -516,7 +572,22 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
  	}
        nat_6t_flow_txfib_rewrite_set (&s->o2i, rx_fib_index);
  
@@ -532,7 +527,7 @@ index 23e0957da..4b3969bdb 100644
 +                                                  tsm->snat_thread_index, s,
 +                                                  &outside_addr,
 +                                                  &outside_port,
-+                                                  outside_fib_index))
++                                                  rx_fib_index))
 +            {
 +              nat_elog_notice (sm, "addresses exhausted");
 +              b->error = node->errors[NAT_IN2OUT_ED_ERROR_OUT_OF_PORTS];
@@ -546,11 +541,11 @@ index 23e0957da..4b3969bdb 100644
  	    r_addr, tsm->snat_thread_index, s, &outside_addr, &outside_port))
  	{
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_inlines.h b/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
-index cb4189602..22bf514ee 100644
+index b99d152da..7c7dce02f 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
-@@ -26,6 +26,45 @@
- #include <nat/lib/log.h>
+@@ -28,6 +28,45 @@
+ #include <nat/lib/ipfix_logging.h>
  #include <nat/nat44-ed/nat44_ed.h>
  
 +always_inline void

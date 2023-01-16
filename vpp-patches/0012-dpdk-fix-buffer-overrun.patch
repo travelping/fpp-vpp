@@ -1,7 +1,7 @@
-From 827dfae47a0501be127af6137f9e858e53a3dbe9 Mon Sep 17 00:00:00 2001
+From a483fcc57d9cd9af1e7deed936102e41ff28e869 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 30 Sep 2022 22:29:15 +0400
-Subject: [PATCH] dpdk: fix buffer overrun
+Subject: [PATCH 12/12] dpdk: fix buffer overrun
 
 Type: fix
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
@@ -10,10 +10,10 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/src/plugins/dpdk/buffer.c b/src/plugins/dpdk/buffer.c
-index 971845194..50a41dae8 100644
+index 8b4b4a926..baf7ba591 100644
 --- a/src/plugins/dpdk/buffer.c
 +++ b/src/plugins/dpdk/buffer.c
-@@ -92,8 +92,7 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
+@@ -93,8 +93,7 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
  
    /* Call the mempool priv initializer */
    memset (&priv, 0, sizeof (priv));
@@ -24,5 +24,5 @@ index 971845194..50a41dae8 100644
    rte_pktmbuf_pool_init (mp, &priv);
    rte_pktmbuf_pool_init (nmp, &priv);
 -- 
-2.30.2
+2.32.0 (Apple Git-132)
 

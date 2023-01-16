@@ -1,6 +1,6 @@
-From 8825682831c7da7fe1dd95faa77411b9730a3905 Mon Sep 17 00:00:00 2001
+From 79457bc812cb1bf8d9e26a017ac43136ef144e2b Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
-Date: Fri, 18 Nov 2022 15:43:00 +0400
+Date: Mon, 19 Dec 2022 16:52:14 +0400
 Subject: [PATCH] [NAT] Add logging if NAT can't perform a translation
 
 ---
@@ -9,12 +9,12 @@ Subject: [PATCH] [NAT] Add logging if NAT can't perform a translation
  2 files changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index 1e2b636a3..fb2d3edc2 100644
+index b6b2ab680..30ee1159d 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
-@@ -2313,7 +2313,7 @@ nat_init (vlib_main_t * vm)
+@@ -2351,7 +2351,7 @@ nat_init (vlib_main_t * vm)
  
-   nat44_set_node_indexes (sm, vm);
+   sm->log_level = NAT_LOG_ERROR;
  
 -  sm->log_class = vlib_log_register_class ("nat", 0);
 +  sm->log_class = vlib_log_register_class_rate_limit ("nat", 0, 1);
@@ -22,20 +22,20 @@ index 1e2b636a3..fb2d3edc2 100644
  
    nat_init_simple_counter (sm->total_sessions, "total-sessions",
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 4b3969bdb..e2eefa1f5 100644
+index 118ac7bcf..b005da8da 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-@@ -211,6 +211,9 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
+@@ -149,6 +149,9 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
    while (attempts > 0);
  
    /* Totally out of translations to use... */
 +  nat_log_warn ("Out of ports for binding %U:%u-%u",
 +		format_ip4_address, &bn->external_addr,
-+		bn->start_port, bn->end_port);
++ 		bn->start_port, bn->end_port);
    return 1;
  }
  
-@@ -464,7 +467,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -503,7 +506,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
  	  b->error = node->errors[NAT_IN2OUT_ED_ERROR_MAX_SESSIONS_EXCEEDED];
  	  nat_ipfix_logging_max_sessions (thread_index,
  					  sm->max_translations_per_thread);
