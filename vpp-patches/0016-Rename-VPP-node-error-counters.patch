@@ -1,0 +1,70 @@
+From ca2e94d6b742d6ae50a2646a4264624a2579152b Mon Sep 17 00:00:00 2001
+From: Sergey Matov <sergey.matov@travelping.com>
+Date: Tue, 17 Jan 2023 13:15:19 +0400
+Subject: [PATCH] Rename VPP node error counters.
+
+If VPP node is about to be renamed each of it's error counters
+should be properly renamed in stats segment.
+---
+ src/vlib/error.c | 19 +++++++++++++++++++
+ src/vlib/error.h |  1 +
+ src/vlib/node.c  |  1 +
+ 3 files changed, 21 insertions(+)
+
+diff --git a/src/vlib/error.c b/src/vlib/error.c
+index de2020f08..4a5a61c9f 100644
+--- a/src/vlib/error.c
++++ b/src/vlib/error.c
+@@ -140,6 +140,25 @@ vlib_unregister_errors (vlib_main_t *vm, u32 node_index)
+     }
+ }
+ 
++void
++vlib_rename_errors (vlib_main_t *vm, u32 node_index)
++{
++  vlib_error_main_t *em = &vm->error_main;
++  vlib_node_t *n = vlib_get_node (vm, node_index);
++  vlib_error_desc_t *cd;
++
++  if (n->n_errors > 0)
++    {
++      cd = vec_elt_at_index (em->counters_heap, n->error_heap_index);
++      for (u32 i = 0; i < n->n_errors; i++)
++	{
++	  vlib_stats_rename_symlink (
++	    cd[i].stats_entry_index, "/err/%v/%U",
++	    n->name, format_stats_counter_name, cd[i].name);
++	}
++    }
++}
++
+ /* Reserves given number of error codes for given node. */
+ void
+ vlib_register_errors (vlib_main_t *vm, u32 node_index, u32 n_errors,
+diff --git a/src/vlib/error.h b/src/vlib/error.h
+index b5cc264b6..e8e1e7698 100644
+--- a/src/vlib/error.h
++++ b/src/vlib/error.h
+@@ -80,6 +80,7 @@ void vlib_register_errors (struct vlib_main_t *vm, u32 node_index,
+ 			   u32 n_errors, char *error_strings[],
+ 			   vlib_error_desc_t counters[]);
+ void vlib_unregister_errors (struct vlib_main_t *vm, u32 node_index);
++void vlib_rename_errors (struct vlib_main_t *vm, u32 node_index);
+ 
+ unformat_function_t unformat_vlib_error;
+ 
+diff --git a/src/vlib/node.c b/src/vlib/node.c
+index 4d1ef989e..adb32404c 100644
+--- a/src/vlib/node.c
++++ b/src/vlib/node.c
+@@ -85,6 +85,7 @@ vlib_node_rename (vlib_main_t * vm, u32 node_index, char *fmt, ...)
+   n->name = va_format (0, fmt, &va);
+   va_end (va);
+   hash_set (nm->node_by_name, n->name, n->index);
++  vlib_rename_errors (vm, node_index);
+ 
+   node_set_elog_name (vm, node_index);
+ 
+-- 
+2.32.0 (Apple Git-132)
+
