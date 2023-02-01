@@ -1,31 +1,92 @@
-From de0327b6851c0f2c13ec8e81ab66373380cffe23 Mon Sep 17 00:00:00 2001
+From 7782aeea854ad3789f5e8c121d31c3c37818f986 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Thu, 23 Jun 2022 16:37:59 +0400
-Subject: [PATCH 10/12] GRE KEY support for tunnel matching
+Subject: [PATCH] GRE KEY support for tunnel matching
 
 ---
- src/vnet/gre/gre.api     |  2 ++
- src/vnet/gre/gre.c       | 16 ++++++++--
- src/vnet/gre/gre.h       | 38 +++++++++++++++++------
- src/vnet/gre/gre_api.c   |  4 +++
- src/vnet/gre/interface.c | 36 ++++++++++++---------
- src/vnet/gre/node.c      | 67 +++++++++++++++++++++++++++++++++-------
- src/vnet/gre/packet.h    |  5 +--
- 7 files changed, 128 insertions(+), 40 deletions(-)
+ src/vnet/gre/gre.api     |  63 +++++++++++++++++++
+ src/vnet/gre/gre.c       |  16 ++++-
+ src/vnet/gre/gre.h       |  38 +++++++++---
+ src/vnet/gre/gre_api.c   | 128 +++++++++++++++++++++++++++++++++++++++
+ src/vnet/gre/interface.c |  36 ++++++-----
+ src/vnet/gre/node.c      |  67 ++++++++++++++++----
+ src/vnet/gre/packet.h    |   5 +-
+ 7 files changed, 313 insertions(+), 40 deletions(-)
 
 diff --git a/src/vnet/gre/gre.api b/src/vnet/gre/gre.api
-index 9c69ba400..43168dec4 100644
+index 9c69ba400..b8f4aa3db 100644
 --- a/src/vnet/gre/gre.api
 +++ b/src/vnet/gre/gre.api
-@@ -50,6 +50,8 @@ typedef gre_tunnel
-   u16 session_id;
-   u32 instance;
-   u32 outer_table_id;
+@@ -103,6 +103,69 @@ define gre_tunnel_details
+   vl_api_gre_tunnel_t tunnel;
+ };
+ 
++typedef gre_tunnel_v2
++{
++  vl_api_gre_tunnel_type_t type;
++  vl_api_tunnel_mode_t mode;
++  vl_api_tunnel_encap_decap_flags_t flags;
++  u16 session_id;
++  u32 instance;
++  u32 outer_table_id;
 +  u32 key;
 +  u8 capabilities;
-   vl_api_interface_index_t sw_if_index;
-   vl_api_address_t src;
-   vl_api_address_t dst;
++  vl_api_interface_index_t sw_if_index;
++  vl_api_address_t src;
++  vl_api_address_t dst;
++};
++
++/** \brief Add or delete a single GRE tunnel V2 request.
++    @param client_index - opaque cookie to identify the sender.
++    @param context - sender context, to match reply w/ request.
++    @param is_add - add if true, delete if false.
++    @param tunnel - tunnel definition to add or delete.
++*/
++define gre_tunnel_add_del_v2
++{
++  u32 client_index;
++  u32 context;
++  bool is_add;
++  vl_api_gre_tunnel_v2_t tunnel;
++};
++
++/** \brief Add or delete a single GRE tunnel V2 response.
++    @param context - sender context, to match reply w/ request.
++    @param retval - return code for the request.
++    @param sw_if_index - the interface corresponding to the affected tunnel.
++*/
++define gre_tunnel_add_del_v2_reply
++{
++  u32 context;
++  i32 retval;
++  vl_api_interface_index_t sw_if_index;
++};
++
++/** \brief Dump details of all or just a single GRE tunnel V2 request.
++    @param client_index - opaque cookie to identify the sender.
++    @param context - sender context, to match reply w/ request.
++    @param sw_if_index - filter for tunnel of this interface index, ~0 for all.
++*/
++define gre_tunnel_v2_dump
++{
++  u32 client_index;
++  u32 context;
++  vl_api_interface_index_t sw_if_index;
++};
++
++/** \brief Details V2 response for one of the requested GRE tunnels.
++    @param context - sender context, to match reply w/ request.
++    @param tunnel - definition of the dumped tunnel.
++*/
++define gre_tunnel_v2_details
++{
++  u32 context;
++  vl_api_gre_tunnel_v2_t tunnel;
++};
++
+ /*
+  * Local Variables:
+  * eval: (c-set-style "gnu")
 diff --git a/src/vnet/gre/gre.c b/src/vnet/gre/gre.c
 index dc735e6a7..ff878ab2d 100644
 --- a/src/vnet/gre/gre.c
@@ -213,27 +274,151 @@ index ea085bf0f..24a4e7781 100644
  
  static inline void
 diff --git a/src/vnet/gre/gre_api.c b/src/vnet/gre/gre_api.c
-index 59a1d3d73..0e5d2da14 100644
+index 59a1d3d73..1fb07925a 100644
 --- a/src/vnet/gre/gre_api.c
 +++ b/src/vnet/gre/gre_api.c
-@@ -114,6 +114,8 @@ static void vl_api_gre_tunnel_add_del_t_handler
-   a->session_id = ntohs (mp->tunnel.session_id);
-   a->outer_table_id = ntohl (mp->tunnel.outer_table_id);
-   a->flags = flags;
-+  a->gre_key = clib_net_to_host_u32 (mp->tunnel.key);
-+  a->capabilities = mp->tunnel.capabilities;
- 
-   rv = vnet_gre_tunnel_add_del (a, &sw_if_index);
- 
-@@ -147,6 +149,8 @@ static void send_gre_tunnel_details
-     rmp->tunnel.instance = htonl (t->user_instance);
-     rmp->tunnel.sw_if_index = htonl (t->sw_if_index);
-     rmp->tunnel.session_id = htons (t->session_id);
-+    rmp->tunnel.key = clib_host_to_net_u32 (t->gre_key);
-+    rmp->tunnel.capabilities = t->capability_flags;
-   }));
+@@ -126,6 +126,70 @@ out:
    /* *INDENT-ON* */
  }
+ 
++static void vl_api_gre_tunnel_add_del_v2_t_handler
++  (vl_api_gre_tunnel_add_del_v2_t * mp)
++{
++  vnet_gre_tunnel_add_del_args_t _a = { }, *a = &_a;
++  vl_api_gre_tunnel_add_del_v2_reply_t *rmp;
++  tunnel_encap_decap_flags_t flags;
++  u32 sw_if_index = ~0;
++  ip46_type_t itype[2];
++  int rv = 0;
++
++  itype[0] = ip_address_decode (&mp->tunnel.src, &a->src);
++  itype[1] = ip_address_decode (&mp->tunnel.dst, &a->dst);
++
++  if (itype[0] != itype[1])
++    {
++      rv = VNET_API_ERROR_INVALID_PROTOCOL;
++      goto out;
++    }
++
++  if (ip46_address_is_equal (&a->src, &a->dst))
++    {
++      rv = VNET_API_ERROR_SAME_SRC_DST;
++      goto out;
++    }
++
++  rv = gre_tunnel_type_decode (mp->tunnel.type, &a->type);
++
++  if (rv)
++    goto out;
++
++  rv = tunnel_mode_decode (mp->tunnel.mode, &a->mode);
++
++  if (rv)
++    goto out;
++
++  if (rv)
++    goto out;
++
++  rv = tunnel_encap_decap_flags_decode (mp->tunnel.flags, &flags);
++
++  if (rv)
++    goto out;
++
++  a->is_add = mp->is_add;
++  a->is_ipv6 = (itype[0] == IP46_TYPE_IP6);
++  a->instance = ntohl (mp->tunnel.instance);
++  a->session_id = ntohs (mp->tunnel.session_id);
++  a->outer_table_id = ntohl (mp->tunnel.outer_table_id);
++  a->flags = flags;
++  a->gre_key = clib_net_to_host_u32 (mp->tunnel.key);
++  a->capabilities = mp->tunnel.capabilities;
++
++  rv = vnet_gre_tunnel_add_del (a, &sw_if_index);
++
++out:
++  /* *INDENT-OFF* */
++  REPLY_MACRO2(VL_API_GRE_TUNNEL_ADD_DEL_V2_REPLY,
++  ({
++    rmp->sw_if_index = ntohl (sw_if_index);
++  }));
++  /* *INDENT-ON* */
++}
++
++
+ static void send_gre_tunnel_details
+   (gre_tunnel_t * t, vl_api_gre_tunnel_dump_t * mp)
+ {
+@@ -187,6 +251,70 @@ vl_api_gre_tunnel_dump_t_handler (vl_api_gre_tunnel_dump_t * mp)
+     }
+ }
+ 
++
++static void send_gre_tunnel_details_v2
++  (gre_tunnel_t * t, vl_api_gre_tunnel_v2_dump_t * mp)
++{
++  vl_api_gre_tunnel_v2_details_t *rmp;
++
++  /* *INDENT-OFF* */
++  REPLY_MACRO_DETAILS2(VL_API_GRE_TUNNEL_V2_DETAILS,
++  ({
++    ip_address_encode (&t->tunnel_src, IP46_TYPE_ANY, &rmp->tunnel.src);
++    ip_address_encode (&t->tunnel_dst.fp_addr, IP46_TYPE_ANY, &rmp->tunnel.dst);
++
++    rmp->tunnel.outer_table_id =
++      htonl (fib_table_get_table_id
++             (t->outer_fib_index, t->tunnel_dst.fp_proto));
++
++    rmp->tunnel.type = gre_tunnel_type_encode (t->type);
++    rmp->tunnel.mode = tunnel_mode_encode (t->mode);
++    rmp->tunnel.flags = tunnel_encap_decap_flags_encode (t->flags);
++    rmp->tunnel.instance = htonl (t->user_instance);
++    rmp->tunnel.sw_if_index = htonl (t->sw_if_index);
++    rmp->tunnel.session_id = htons (t->session_id);
++    rmp->tunnel.key = clib_host_to_net_u32 (t->gre_key);
++    rmp->tunnel.capabilities = t->capability_flags;
++  }));
++  /* *INDENT-ON* */
++}
++
++static void
++vl_api_gre_tunnel_v2_dump_t_handler (vl_api_gre_tunnel_v2_dump_t * mp)
++{
++  vl_api_registration_t *reg;
++  gre_main_t *gm = &gre_main;
++  gre_tunnel_t *t;
++  u32 sw_if_index;
++
++  reg = vl_api_client_index_to_registration (mp->client_index);
++  if (!reg)
++    return;
++
++  sw_if_index = ntohl (mp->sw_if_index);
++
++  if (~0 == sw_if_index)
++    {
++      /* *INDENT-OFF* */
++      pool_foreach (t, gm->tunnels)
++       {
++        send_gre_tunnel_details_v2(t, mp);
++      }
++      /* *INDENT-ON* */
++    }
++
++  else
++    {
++      if ((sw_if_index >= vec_len (gm->tunnel_index_by_sw_if_index)) ||
++          (~0 == gm->tunnel_index_by_sw_if_index[sw_if_index]))
++        {
++          return;
++        }
++      t = &gm->tunnels[gm->tunnel_index_by_sw_if_index[sw_if_index]];
++      send_gre_tunnel_details_v2 (t, mp);
++    }
++}
++
+ /*
+  * gre_api_hookup
+  * Add vpe's API message handlers to the table.
 diff --git a/src/vnet/gre/interface.c b/src/vnet/gre/interface.c
 index bb0be8656..b605367a9 100644
 --- a/src/vnet/gre/interface.c
