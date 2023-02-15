@@ -1,8 +1,8 @@
-From 62c2f888f1c54844335d8bab1e3b152c1a29efdd Mon Sep 17 00:00:00 2001
+From 90a91314c7b15caae55e90ed181cb69eb343bced Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Tue, 9 Nov 2021 12:27:04 +0300
-Subject: [PATCH 05/12] vnet: include fib_entry_track/fib_path/fib_walk headers
- in dev pkg
+Subject: [PATCH] vnet: include fib_entry_track/fib_path/fib_walk headers in
+ dev pkg
 
 Type: fix
 
@@ -29,5 +29,5 @@ index ef187dc2f..8a1133739 100644
  
  list(APPEND VNET_API_FILES
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

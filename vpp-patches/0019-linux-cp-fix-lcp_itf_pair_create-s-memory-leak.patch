@@ -1,0 +1,39 @@
+From 8737a91229ac2e63d6544b6a582f2e5fbad0fa3b Mon Sep 17 00:00:00 2001
+From: luoyaozu <luoyaozu@foxmail.com>
+Date: Mon, 31 Oct 2022 21:46:38 +0800
+Subject: [PATCH] linux-cp: fix lcp_itf_pair_create()'s memory leak
+
+need free args.error if args.rv < 0
+
+Type: fix
+
+Signed-off-by: luoyaozu <luoyaozu@foxmail.com>
+Change-Id: I8ceebfc36f51798d8d1a8e4c41bec33d74344396
+---
+ src/plugins/linux-cp/lcp_interface.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/plugins/linux-cp/lcp_interface.c b/src/plugins/linux-cp/lcp_interface.c
+index d629a0686..eef06ecfa 100644
+--- a/src/plugins/linux-cp/lcp_interface.c
++++ b/src/plugins/linux-cp/lcp_interface.c
+@@ -979,6 +979,8 @@ lcp_itf_pair_create (u32 phy_sw_if_index, u8 *host_if_name,
+ 	.tx_ring_sz = 256,
+ 	.host_if_name = host_if_name,
+ 	.host_namespace = 0,
++	.rv = 0,
++	.error = NULL,
+       };
+       ethernet_interface_t *ei;
+       u32 host_sw_mtu_size;
+@@ -1017,6 +1019,7 @@ lcp_itf_pair_create (u32 phy_sw_if_index, u8 *host_if_name,
+ 	{
+ 	  LCP_ITF_PAIR_ERR ("pair_create: could not create tap, retval:%d",
+ 			    args.rv);
++	  clib_error_free (args.error);
+ 	  return args.rv;
+ 	}
+ 
+-- 
+2.30.2
+

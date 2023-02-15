@@ -1,4 +1,4 @@
-From 10742449c419480e8fa042d9a29a4a444e643b54 Mon Sep 17 00:00:00 2001
+From ee75000b4eb26f72e8a81ea03ff3ce31243f631d Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 14 Oct 2022 19:21:00 +0400
 Subject: [PATCH] vnet: fix returning tag in interface details

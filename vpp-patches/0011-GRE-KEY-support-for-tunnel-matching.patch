@@ -1,4 +1,4 @@
-From 7782aeea854ad3789f5e8c121d31c3c37818f986 Mon Sep 17 00:00:00 2001
+From 71abcb44b9e47da1800e040efcfc4147f8d904a0 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Thu, 23 Jun 2022 16:37:59 +0400
 Subject: [PATCH] GRE KEY support for tunnel matching
@@ -712,5 +712,5 @@ index bbd67d565..11a840a21 100644
  /* From draft-foschiano-erspan-03.txt
  
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

@@ -1,0 +1,60 @@
+From 5091caad9d0939ee195dd368b39ce03a876fd0b3 Mon Sep 17 00:00:00 2001
+From: luoyaozu <luoyaozu@foxmail.com>
+Date: Sat, 15 Oct 2022 19:31:05 +0800
+Subject: [PATCH] linux-cp: fix infinite loop in CLI lcp default
+
+CLI lcp default clear or lcp default netns  hangs in an infinite while loop.
+
+Type: fix
+
+Signed-off-by: luoyaozu <luoyaozu@foxmail.com>
+Change-Id: I699338abc045c84361707260adbb5b574a383170
+---
+ src/plugins/linux-cp/lcp_cli.c | 15 ++++++++++++---
+ 1 file changed, 12 insertions(+), 3 deletions(-)
+
+diff --git a/src/plugins/linux-cp/lcp_cli.c b/src/plugins/linux-cp/lcp_cli.c
+index a7732a98b..0dcf600b3 100644
+--- a/src/plugins/linux-cp/lcp_cli.c
++++ b/src/plugins/linux-cp/lcp_cli.c
+@@ -215,6 +215,7 @@ lcp_default_netns_command_fn (vlib_main_t *vm, unformat_input_t *input,
+   unformat_input_t _line_input, *line_input = &_line_input;
+   u8 *ns;
+   int r;
++  clib_error_t *error = NULL;
+ 
+   if (!unformat_user (input, unformat_line_input, line_input))
+     return 0;
+@@ -227,10 +228,15 @@ lcp_default_netns_command_fn (vlib_main_t *vm, unformat_input_t *input,
+ 	;
+       else if (unformat (line_input, "clear netns"))
+ 	;
++      else
++	{
++	  vec_free (ns);
++	  error = clib_error_return (0, "unknown input `%U'",
++				     format_unformat_error, line_input);
++	  goto done;
++	}
+     }
+ 
+-  unformat_free (line_input);
+-
+   vlib_cli_output (vm, "lcp set default netns '%s'\n", (char *) ns);
+ 
+   r = lcp_set_default_ns (ns);
+@@ -238,7 +244,10 @@ lcp_default_netns_command_fn (vlib_main_t *vm, unformat_input_t *input,
+   if (r)
+     return clib_error_return (0, "linux-cp set default netns failed (%d)", r);
+ 
+-  return 0;
++done:
++  unformat_free (line_input);
++
++  return error;
+ }
+ 
+ VLIB_CLI_COMMAND (lcp_default_netns_command, static) = {
+-- 
+2.30.2
+

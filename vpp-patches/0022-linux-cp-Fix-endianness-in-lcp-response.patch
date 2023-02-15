@@ -1,0 +1,52 @@
+From 46bdbac77a0e95025143b27241304bb3e1f61589 Mon Sep 17 00:00:00 2001
+From: Pim van Pelt <pim@ipng.nl>
+Date: Wed, 11 Jan 2023 11:31:41 +0000
+Subject: [PATCH] linux-cp: Fix endianness in lcp response
+
+Creation of LCP will return garbled host_sw_if_index of the newly
+created TAP interface.
+
+Example PAPI code:
+```
+lcp_add = vpp.api.lcp_itf_pair_add_del_v2(is_add=True, sw_if_index=17,
+          host_if_type=VppEnum.vl_api_lcp_itf_host_type_t.LCP_API_ITF_HOST_TAP,
+          host_if_name="loop0", netns="dataplane")
+print(lcp_add)
+
+lcp_ret = vpp.api.lcp_itf_pair_get()
+print(lcp_ret)
+```
+
+Before, the returned host_sw_if_index has the wrong endianness:
+VPP version is 23.02-rc0~212-gf06a518f8
+lcp_itf_pair_add_del_v2_reply(_0=103, context=2, retval=0, host_sw_if_index=301989888)
+(lcp_itf_pair_get_reply(_0=105, context=3, retval=0, cursor=4294967295),[lcp_itf_pair_details(_0=106, context=3, phy_sw_if_index=17, host_sw_if_index=18, vif_index=594, host_if_name='loop0', host_if_type=<vl_api_lcp_itf_host_type_t.LCP_API_ITF_HOST_TAP: 0>, netns='dataplane')])
+
+After, it is correctly showing idx 18:
+VPP version is 23.02-rc0~212-gf06a518f8
+lcp_itf_pair_add_del_v2_reply(_0=103, context=2, retval=0, host_sw_if_index=18)
+(lcp_itf_pair_get_reply(_0=105, context=3, retval=0, cursor=4294967295), [lcp_itf_pair_details(_0=106, context=3, phy_sw_if_index=17, host_sw_if_index=18, vif_index=595, host_if_name='loop0', host_if_type=<vl_api_lcp_itf_host_type_t.LCP_API_ITF_HOST_TAP: 0>, netns='dataplane')])
+
+Type: fix
+Signed-off-by: pim@ipng.nl
+Change-Id: I9085bac0c4a9ad64356c67f9b85f4910131e349e
+---
+ src/plugins/linux-cp/lcp_api.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/plugins/linux-cp/lcp_api.c b/src/plugins/linux-cp/lcp_api.c
+index b976236d5..e7edf5599 100644
+--- a/src/plugins/linux-cp/lcp_api.c
++++ b/src/plugins/linux-cp/lcp_api.c
+@@ -123,7 +123,7 @@ vl_api_lcp_itf_pair_add_del_v2_t_handler (vl_api_lcp_itf_pair_add_del_v2_t *mp)
+ 
+   BAD_SW_IF_INDEX_LABEL;
+   REPLY_MACRO2_END (VL_API_LCP_ITF_PAIR_ADD_DEL_V2_REPLY,
+-		    { rmp->host_sw_if_index = ntohl (host_sw_if_index); });
++		    { rmp->host_sw_if_index = host_sw_if_index; });
+ }
+ 
+ static void
+-- 
+2.30.2
+

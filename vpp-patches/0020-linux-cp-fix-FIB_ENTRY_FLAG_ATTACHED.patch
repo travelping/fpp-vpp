@@ -1,0 +1,48 @@
+From 6dca4acea7390744f67915c8859b292ab5150761 Mon Sep 17 00:00:00 2001
+From: Alexander Skorichenko <askorichenko@netgate.com>
+Date: Mon, 14 Nov 2022 11:59:56 +0000
+Subject: [PATCH] linux-cp: fix FIB_ENTRY_FLAG_ATTACHED
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Type: fix
+   
+Fib entries for attached routes when sourced from
+FIB_SOURCE_API or FIB_SOURCE_CLI
+get the FIB_ENTRY_FLAG_ATTACHED flag raised on the source.
+Such a route added from linux-cp doesn't get this flag.
+   
+Fix this flag for linux-cp sources by passing it to the
+fib entry's update/create function in lcp_router_route_add().
+
+Signed-off-by: Alexander Skorichenko <askorichenko@netgate.com>
+Change-Id: I24278ef86886cfee8a14acb250fb6992a754cc3c
+---
+ src/plugins/linux-cp/lcp_router.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/plugins/linux-cp/lcp_router.c b/src/plugins/linux-cp/lcp_router.c
+index 04a6ba05a..ab8ab1649 100644
+--- a/src/plugins/linux-cp/lcp_router.c
++++ b/src/plugins/linux-cp/lcp_router.c
+@@ -1229,6 +1229,16 @@ lcp_router_route_add (struct rtnl_route *rr)
+ 	  else
+ 	    {
+ 	      fib_source_t fib_src;
++	      const fib_route_path_t *rpath;
++
++	      vec_foreach (rpath, np.paths)
++		{
++		  if (fib_route_path_is_attached (rpath))
++		    {
++		      entry_flags |= FIB_ENTRY_FLAG_ATTACHED;
++		      break;
++		    }
++		}
+ 
+ 	      fib_src = lcp_router_proto_fib_source (rproto);
+ 
+-- 
+2.30.2
+

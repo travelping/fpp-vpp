@@ -1,7 +1,7 @@
-From 5e17986bfdea71bbcc5c5f51eb55a3959008e804 Mon Sep 17 00:00:00 2001
+From 7925f7f977ccf6e67ac93ac6c29a467edf5a76dc Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Tue, 31 May 2022 11:24:12 +0400
-Subject: [PATCH 09/12] nat: fix handling checksum offload in nat44-ed
+Subject: [PATCH] nat: fix handling checksum offload in nat44-ed
 
 Type: fix
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
@@ -47,5 +47,5 @@ index 56dfe4556..b6b2ab680 100644
  
  static_always_inline int
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

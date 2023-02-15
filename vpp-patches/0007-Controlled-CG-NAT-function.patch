@@ -1,7 +1,7 @@
-From 226c51ad14ad747bdb8e742d32f35379e0b0fda7 Mon Sep 17 00:00:00 2001
+From 573b729d7e1d967d8e42b1676664a69b35163e2c Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 14 Feb 2022 11:08:33 +0400
-Subject: [PATCH 06/12] Controlled CG-NAT function
+Subject: [PATCH] Controlled CG-NAT function
 
 ---
  src/plugins/nat/nat44-ed/nat44_ed.c         | 180 ++++++++++++++++++++
@@ -591,5 +591,5 @@ index b99d152da..7c7dce02f 100644
  init_ed_k (clib_bihash_kv_16_8_t *kv, u32 l_addr, u16 l_port, u32 r_addr,
  	   u16 r_port, u32 fib_index, ip_protocol_t proto)
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

@@ -1,4 +1,4 @@
-From ebf04980e7146e000f28ae9616a9a5a7e8b7e3b9 Mon Sep 17 00:00:00 2001
+From f26371b3328a345919b8dc076f7e33008c19ce91 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Fri, 14 Oct 2022 15:49:49 +0400
 Subject: [PATCH] PAPI: add socket import to provider
@@ -20,5 +20,5 @@ index db2b32e1d..e98bad2b6 100644
  from config import config
  from vpp_papi import VPPApiClient
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

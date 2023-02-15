@@ -1,4 +1,4 @@
-From ca2e94d6b742d6ae50a2646a4264624a2579152b Mon Sep 17 00:00:00 2001
+From 82385ab77b6d873925a0f3b208e6e8624a381e67 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Tue, 17 Jan 2023 13:15:19 +0400
 Subject: [PATCH] Rename VPP node error counters.
@@ -66,5 +66,5 @@ index 4d1ef989e..adb32404c 100644
    node_set_elog_name (vm, node_index);
  
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 
