@@ -1,7 +1,7 @@
-From 47910bb0f01760a5a87f076bac08e8f52faf37ca Mon Sep 17 00:00:00 2001
+From afc4cf23ae0ccef29b2e36121d78cf5b2472a634 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 4 Feb 2022 19:02:09 +0300
-Subject: [PATCH 01/12] CI and build infrastructure adjustments
+Subject: [PATCH] CI and build infrastructure adjustments
 
 ---
  Makefile                  | 7 +++++++
@@ -58,5 +58,5 @@ index 5f597f4ea..9293298cb 100644
   This package contains the VPP dpdk plugin
   .
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

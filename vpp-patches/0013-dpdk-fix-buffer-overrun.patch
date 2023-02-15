@@ -1,7 +1,7 @@
-From a483fcc57d9cd9af1e7deed936102e41ff28e869 Mon Sep 17 00:00:00 2001
+From 5550a621214b3f6b4b209363e9dbc78b3ee1b65c Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 30 Sep 2022 22:29:15 +0400
-Subject: [PATCH 12/12] dpdk: fix buffer overrun
+Subject: [PATCH] dpdk: fix buffer overrun
 
 Type: fix
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
@@ -24,5 +24,5 @@ index 8b4b4a926..baf7ba591 100644
    rte_pktmbuf_pool_init (mp, &priv);
    rte_pktmbuf_pool_init (nmp, &priv);
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

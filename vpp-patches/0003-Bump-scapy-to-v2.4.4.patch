@@ -1,7 +1,7 @@
-From 68e664a128a0c6dbf039b6e428b381d7c80b579d Mon Sep 17 00:00:00 2001
+From 4ff9a364d8e42ff0f4e9641d5987e5a8af1c1eb9 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Mon, 21 Sep 2020 19:13:15 +0300
-Subject: [PATCH 03/12] Bump scapy to v2.4.4
+Subject: [PATCH] Bump scapy to v2.4.4
 
 ---
  test/requirements-3.txt | 4 ++--
@@ -54,5 +54,5 @@ index 3572d64e7..9b47d60dd 100644
  from framework import VppTestCase, VppTestRunner
  from util import Host, ppp
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

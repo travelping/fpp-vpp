@@ -1,7 +1,7 @@
-From 79457bc812cb1bf8d9e26a017ac43136ef144e2b Mon Sep 17 00:00:00 2001
+From 331b5df63cfcfe82d090f574218c5675f1f9f322 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 19 Dec 2022 16:52:14 +0400
-Subject: [PATCH] [NAT] Add logging if NAT can't perform a translation
+Subject: [PATCH] Add logging if NAT can't perform a translation
 
 ---
  src/plugins/nat/nat44-ed/nat44_ed.c        | 2 +-
@@ -22,7 +22,7 @@ index b6b2ab680..30ee1159d 100644
  
    nat_init_simple_counter (sm->total_sessions, "total-sessions",
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 118ac7bcf..b005da8da 100644
+index 118ac7bcf..16072ba5d 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 @@ -149,6 +149,9 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
@@ -31,7 +31,7 @@ index 118ac7bcf..b005da8da 100644
    /* Totally out of translations to use... */
 +  nat_log_warn ("Out of ports for binding %U:%u-%u",
 +		format_ip4_address, &bn->external_addr,
-+ 		bn->start_port, bn->end_port);
++		bn->start_port, bn->end_port);
    return 1;
  }
  
@@ -45,5 +45,5 @@ index 118ac7bcf..b005da8da 100644
  	}
      }
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

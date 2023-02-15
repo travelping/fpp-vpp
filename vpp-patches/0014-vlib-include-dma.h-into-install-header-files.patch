@@ -1,4 +1,4 @@
-From 0fa420adf47e79c8a928de19b14f20149b7bc633 Mon Sep 17 00:00:00 2001
+From 8ef087923cfd3182cee0ee8d123220a7609721b8 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Fri, 14 Oct 2022 14:56:52 +0400
 Subject: [PATCH] vlib: include dma.h into install header files
@@ -20,5 +20,5 @@ index 69bd18b6d..74069681d 100644
    API_FILES
    pci/pci_types.api
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

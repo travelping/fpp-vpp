@@ -1,7 +1,7 @@
-From 7d072e3b25cb48a86ed5db025806fd2aa3a53734 Mon Sep 17 00:00:00 2001
+From e717406eac1875f08092290ef35065365fcd1873 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Wed, 5 Aug 2020 16:44:28 +0300
-Subject: [PATCH 02/12] Increase reassembly limit
+Subject: [PATCH] Increase reassembly limit
 
 This is an interim solution till we implement a proper CLI command
 ---
@@ -22,5 +22,5 @@ index 5b69234e4..8e961e2f3 100644
  
  #define IP4_REASS_DEBUG_BUFFERS 0
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 

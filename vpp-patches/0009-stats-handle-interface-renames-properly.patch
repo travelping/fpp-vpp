@@ -1,7 +1,7 @@
-From 81f6d090c0d3c141b2aba3fdb42a716736f761c2 Mon Sep 17 00:00:00 2001
+From 601b5fb89fc9325830d5a17ae6101762cb430862 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Wed, 6 Jul 2022 05:03:28 +0400
-Subject: [PATCH 08/12] stats: handle interface renames properly
+Subject: [PATCH] stats: handle interface renames properly
 
 Type: fix
 Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
@@ -133,5 +133,5 @@ index 000000000..77dd1d3f3
 +
 +#endif
 -- 
-2.32.0 (Apple Git-132)
+2.30.2
 
