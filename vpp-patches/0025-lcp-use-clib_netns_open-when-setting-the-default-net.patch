@@ -1,0 +1,60 @@
+From e0bd051da42989b3cde3105bbe73fe5183dc768c Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Fri, 17 Feb 2023 23:26:55 +0400
+Subject: [PATCH] lcp: use clib_netns_open() when setting the default netns
+
+This makes it consistent with handling of LCP per-interface netns
+handling.
+
+Type: improvement
+Signed-Off-By: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/plugins/linux-cp/lcp.c | 11 +++++------
+ 1 file changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/src/plugins/linux-cp/lcp.c b/src/plugins/linux-cp/lcp.c
+index 33c71e441..be40fc28c 100644
+--- a/src/plugins/linux-cp/lcp.c
++++ b/src/plugins/linux-cp/lcp.c
+@@ -19,6 +19,8 @@
+ #include <sys/socket.h>
+ #include <net/if.h>
+ 
++#include <vppinfra/linux/netns.h>
++
+ #include <plugins/linux-cp/lcp.h>
+ #include <plugins/linux-cp/lcp_interface.h>
+ 
+@@ -52,7 +54,6 @@ lcp_set_default_ns (u8 *ns)
+   lcp_main_t *lcpm = &lcp_main;
+   char *p;
+   int len;
+-  u8 *s;
+ 
+   p = (char *) ns;
+   len = clib_strnlen (p, LCP_NS_LEN);
+@@ -61,7 +62,7 @@ lcp_set_default_ns (u8 *ns)
+ 
+   if (!p || *p == 0)
+     {
+-      lcpm->default_namespace = NULL;
++      vec_free (lcpm->default_namespace);
+       if (lcpm->default_ns_fd > 0)
+ 	close (lcpm->default_ns_fd);
+       lcpm->default_ns_fd = 0;
+@@ -69,10 +70,8 @@ lcp_set_default_ns (u8 *ns)
+     }
+ 
+   vec_validate_init_c_string (lcpm->default_namespace, p,
+-			      clib_strnlen (p, LCP_NS_LEN));
+-  s = format (0, "/var/run/netns/%s%c", (char *) lcpm->default_namespace, 0);
+-  lcpm->default_ns_fd = open ((char *) s, O_RDONLY);
+-  vec_free (s);
++                              clib_strnlen (p, LCP_NS_LEN));
++  lcpm->default_ns_fd = clib_netns_open (lcpm->default_namespace);
+ 
+   return 0;
+ }
+-- 
+2.30.2
+
