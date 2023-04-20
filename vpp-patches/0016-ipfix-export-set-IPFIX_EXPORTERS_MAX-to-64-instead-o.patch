@@ -1,0 +1,29 @@
+From 84ffed6f2fa6bfc823c5a7bcfade1323e757ae7d Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Thu, 20 Apr 2023 08:48:04 +0400
+Subject: [PATCH] ipfix-export: set IPFIX_EXPORTERS_MAX to 64 instead of 5
+
+We've run into a situation where 5 exporters is not enough.
+
+Type: fix
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/vnet/ipfix-export/flow_report.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vnet/ipfix-export/flow_report.h b/src/vnet/ipfix-export/flow_report.h
+index cd0cafb61..35fabf7a9 100644
+--- a/src/vnet/ipfix-export/flow_report.h
++++ b/src/vnet/ipfix-export/flow_report.h
+@@ -151,7 +151,7 @@ typedef struct flow_report
+ /*
+  * The maximum number of ipfix exporters we can have at once
+  */
+-#define IPFIX_EXPORTERS_MAX 5
++#define IPFIX_EXPORTERS_MAX 64
+ 
+ /*
+  * We support multiple exporters. Each one has its own configured
+-- 
+2.30.2
+
