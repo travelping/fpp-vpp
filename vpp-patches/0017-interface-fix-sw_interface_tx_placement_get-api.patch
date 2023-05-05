@@ -1,0 +1,27 @@
+From 1f6c5e255cdc53caaf33213cc2a483c314cc06e2 Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Fri, 5 May 2023 05:43:51 +0400
+Subject: [PATCH] interface: fix sw_interface_tx_placement_get api
+
+Type: fix
+
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/vnet/interface_api.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/vnet/interface_api.c b/src/vnet/interface_api.c
+index 938f3bb32..9c584069e 100644
+--- a/src/vnet/interface_api.c
++++ b/src/vnet/interface_api.c
+@@ -1227,6 +1227,7 @@ send_interface_tx_placement_details (vnet_hw_if_tx_queue_t **all_queues,
+   n_bits = clib_bitmap_count_set_bits (bitmap);
+   u32 n = n_bits * sizeof (u32);
+ 
++  context = clib_host_to_net_u32 (context);
+   /*
+    * FIXME: Use the REPLY_MACRO_DETAILS5_END once endian handler is registered
+    * and available.
+-- 
+2.40.0
+
