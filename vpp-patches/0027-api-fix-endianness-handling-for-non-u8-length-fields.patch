@@ -1,0 +1,568 @@
+From ad62199bf2fc61ee5ded22af5e4f09826d5479ca Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan4th@gmail.com>
+Date: Wed, 3 May 2023 14:23:10 +0400
+Subject: [PATCH] api: fix endianness handling for non-u8 length fields
+
+Type: fix
+
+When handling length fields larger than u8 in the generated binapi,
+the endianness handler was not processing them correctly, leading to
+memory corruption. Additionally, if a length field is present,
+endianness processing cannot be symmetric, as the length field value
+must be read before the host-to-network byte order conversion, and
+after the network-to-host conversion. This issue was observed, for
+example, in the threads array in sw_interface_tx_placement_details and
+sw_interface_set_tx_placement, which use a u32 array_size field to
+represent their length. Moreover, there was an error in handling the
+context field when sending sw_interface_tx_placement_details to the
+client.
+
+Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
+Change-Id: I2ad5f22a99c5a4eb767121e0abd62613c5a7128c
+---
+ src/plugins/acl/acl_test.c              | 16 +++--
+ src/plugins/ikev2/ikev2_api.c           |  8 +--
+ src/plugins/ikev2/ikev2_test.c          |  6 +-
+ src/plugins/nat/nat44-ed/nat44_ed_api.c |  2 +-
+ src/plugins/nat/nat44-ei/nat44_ei_api.c |  2 +-
+ src/plugins/nat/pnat/pnat_api.c         |  4 +-
+ src/tools/vppapigen/vppapigen_c.py      | 90 +++++++++++++++----------
+ src/vat2/vat2_helpers.h                 |  2 +-
+ src/vlibapi/api_common.h                |  4 +-
+ src/vlibapi/api_helper_macros.h         |  4 +-
+ src/vlibapi/api_shared.c                |  4 +-
+ src/vlibmemory/memory_api.c             |  4 +-
+ src/vlibmemory/vlib_api_cli.c           |  6 +-
+ src/vnet/interface_api.c                |  5 +-
+ 14 files changed, 88 insertions(+), 69 deletions(-)
+
+diff --git a/src/plugins/acl/acl_test.c b/src/plugins/acl/acl_test.c
+index 7514a8e2e..955243e77 100644
+--- a/src/plugins/acl/acl_test.c
++++ b/src/plugins/acl/acl_test.c
+@@ -114,7 +114,7 @@ static void vl_api_acl_interface_list_details_t_handler
+         int i;
+         vat_main_t * vam = acl_test_main.vat_main;
+         u8 *out = 0;
+-        vl_api_acl_interface_list_details_t_endian(mp);
++	vl_api_acl_interface_list_details_t_endian (mp, false);
+ 	out = format(out, "sw_if_index: %d, count: %d, n_input: %d\n", mp->sw_if_index, mp->count, mp->n_input);
+         out = format(out, "   input ");
+ 	for(i=0; i<mp->count; i++) {
+@@ -141,7 +141,7 @@ static void vl_api_acl_interface_etype_whitelist_details_t_handler
+         int i;
+         vat_main_t * vam = acl_test_main.vat_main;
+         u8 *out = 0;
+-        vl_api_acl_interface_etype_whitelist_details_t_endian(mp);
++	vl_api_acl_interface_etype_whitelist_details_t_endian (mp, false);
+ 	out = format(out, "sw_if_index: %d, count: %d, n_input: %d\n", mp->sw_if_index, mp->count, mp->n_input);
+         out = format(out, "   input ");
+ 	for(i=0; i<mp->count; i++) {
+@@ -191,9 +191,10 @@ static void vl_api_acl_details_t_handler
+     {
+         int i;
+         vat_main_t * vam = acl_test_main.vat_main;
+-        vl_api_acl_details_t_endian(mp);
+-        u8 *out = 0;
+-        out = format(0, "acl_index: %d, count: %d\n   tag {%s}\n", mp->acl_index, mp->count, mp->tag);
++	vl_api_acl_details_t_endian (mp, false);
++	u8 *out = 0;
++	out = format (0, "acl_index: %d, count: %d\n   tag {%s}\n",
++		      mp->acl_index, mp->count, mp->tag);
+ 	for(i=0; i<mp->count; i++) {
+           out = format(out, "   ");
+           out = vl_api_acl_rule_t_pretty_format(out, &mp->r[i]);
+@@ -225,8 +226,9 @@ static void vl_api_macip_acl_details_t_handler
+     {
+         int i;
+         vat_main_t * vam = acl_test_main.vat_main;
+-        vl_api_macip_acl_details_t_endian(mp);
+-        u8 *out = format(0,"MACIP acl_index: %d, count: %d\n   tag {%s}\n", mp->acl_index, mp->count, mp->tag);
++	vl_api_macip_acl_details_t_endian (mp, false);
++	u8 *out = format (0, "MACIP acl_index: %d, count: %d\n   tag {%s}\n",
++			  mp->acl_index, mp->count, mp->tag);
+ 	for(i=0; i<mp->count; i++) {
+           out = format(out, "   ");
+           out = vl_api_macip_acl_rule_t_pretty_format(out, &mp->r[i]);
+diff --git a/src/plugins/ikev2/ikev2_api.c b/src/plugins/ikev2/ikev2_api.c
+index 6485b6d85..804b1239d 100644
+--- a/src/plugins/ikev2/ikev2_api.c
++++ b/src/plugins/ikev2/ikev2_api.c
+@@ -173,7 +173,7 @@ send_profile (ikev2_profile_t * profile, vl_api_registration_t * reg,
+   rmp->profile.lifetime_jitter = profile->lifetime_jitter;
+   rmp->profile.handover = profile->handover;
+ 
+-  vl_api_ikev2_profile_t_endian (&rmp->profile);
++  vl_api_ikev2_profile_t_endian (&rmp->profile, true);
+ 
+   vl_api_send_msg (reg, (u8 *) rmp);
+ }
+@@ -268,7 +268,7 @@ send_sa (ikev2_sa_t * sa, vl_api_ikev2_sa_dump_t * mp, u32 api_sa_index)
+ 
+     ikev2_copy_stats (&rsa->stats, &sa->stats);
+ 
+-    vl_api_ikev2_sa_t_endian(rsa);
++    vl_api_ikev2_sa_t_endian (rsa, true);
+   });
+   /* *INDENT-ON* */
+ }
+@@ -346,7 +346,7 @@ send_child_sa (ikev2_child_sa_t * child,
+ 		     k->sk_ar_len);
+       }
+ 
+-    vl_api_ikev2_child_sa_t_endian (&rmp->child_sa);
++    vl_api_ikev2_child_sa_t_endian (&rmp->child_sa, true);
+   });
+   /* *INDENT-ON* */
+ }
+@@ -420,7 +420,7 @@ static void
+       rmp->ts.sa_index = api_sa_index;
+       rmp->ts.child_sa_index = child_sa_index;
+       cp_ts (&rmp->ts, ts, mp->is_initiator);
+-      vl_api_ikev2_ts_t_endian (&rmp->ts);
++      vl_api_ikev2_ts_t_endian (&rmp->ts, true);
+     });
+     /* *INDENT-ON* */
+   }
+diff --git a/src/plugins/ikev2/ikev2_test.c b/src/plugins/ikev2/ikev2_test.c
+index 9f5728135..abc0daedf 100644
+--- a/src/plugins/ikev2/ikev2_test.c
++++ b/src/plugins/ikev2/ikev2_test.c
+@@ -391,7 +391,7 @@ vl_api_ikev2_sa_details_t_handler (vl_api_ikev2_sa_details_t * mp)
+   ip_address_t iaddr;
+   ip_address_t raddr;
+   vl_api_ikev2_keys_t *k = &sa->keys;
+-  vl_api_ikev2_sa_t_endian (sa);
++  vl_api_ikev2_sa_t_endian (sa, false);
+ 
+   ip_address_decode2 (&sa->iaddr, &iaddr);
+   ip_address_decode2 (&sa->raddr, &raddr);
+@@ -479,7 +479,7 @@ vl_api_ikev2_child_sa_details_t_handler (vl_api_ikev2_child_sa_details_t * mp)
+   vat_main_t *vam = ikev2_test_main.vat_main;
+   vl_api_ikev2_child_sa_t *child_sa = &mp->child_sa;
+   vl_api_ikev2_keys_t *k = &child_sa->keys;
+-  vl_api_ikev2_child_sa_t_endian (child_sa);
++  vl_api_ikev2_child_sa_t_endian (child_sa, false);
+ 
+   fformat (vam->ofp, "  child sa %u:\n", child_sa->child_sa_index);
+ 
+@@ -567,7 +567,7 @@ static void
+   vat_main_t *vam = ikev2_test_main.vat_main;
+   vl_api_ikev2_ts_t *ts = &mp->ts;
+   ip_address_t start_addr, end_addr;
+-  vl_api_ikev2_ts_t_endian (ts);
++  vl_api_ikev2_ts_t_endian (ts, false);
+ 
+   ip_address_decode2 (&ts->start_addr, &start_addr);
+   ip_address_decode2 (&ts->end_addr, &end_addr);
+diff --git a/src/plugins/nat/nat44-ed/nat44_ed_api.c b/src/plugins/nat/nat44-ed/nat44_ed_api.c
+index c43042994..b22a09880 100644
+--- a/src/plugins/nat/nat44-ed/nat44_ed_api.c
++++ b/src/plugins/nat/nat44-ed/nat44_ed_api.c
+@@ -442,7 +442,7 @@ send_nat44_ed_output_interface_details (u32 index, vl_api_registration_t *rp,
+ 
+       /* Endian hack until apigen registers _details
+        * endian functions */
+-      vl_api_nat44_ed_output_interface_details_t_endian (rmp);
++      vl_api_nat44_ed_output_interface_details_t_endian (rmp, true);
+       rmp->_vl_msg_id = htons (rmp->_vl_msg_id);
+       rmp->context = htonl (rmp->context);
+     }));
+diff --git a/src/plugins/nat/nat44-ei/nat44_ei_api.c b/src/plugins/nat/nat44-ei/nat44_ei_api.c
+index 425c03c51..f4ee920f7 100644
+--- a/src/plugins/nat/nat44-ei/nat44_ei_api.c
++++ b/src/plugins/nat/nat44-ei/nat44_ei_api.c
+@@ -749,7 +749,7 @@ send_nat44_ei_output_interface_details (u32 index, vl_api_registration_t *rp,
+ 
+       /* Endian hack until apigen registers _details
+        * endian functions */
+-      vl_api_nat44_ei_output_interface_details_t_endian (rmp);
++      vl_api_nat44_ei_output_interface_details_t_endian (rmp, true);
+       rmp->_vl_msg_id = htons (rmp->_vl_msg_id);
+       rmp->context = htonl (rmp->context);
+     }));
+diff --git a/src/plugins/nat/pnat/pnat_api.c b/src/plugins/nat/pnat/pnat_api.c
+index 02e61219d..794dd3806 100644
+--- a/src/plugins/nat/pnat/pnat_api.c
++++ b/src/plugins/nat/pnat/pnat_api.c
+@@ -116,7 +116,7 @@ static void send_bindings_details(u32 index, vl_api_registration_t *rp,
+ 
+                              /* Endian hack until apigen registers _details
+                               * endian functions */
+-                             vl_api_pnat_bindings_details_t_endian(rmp);
++                             vl_api_pnat_bindings_details_t_endian(rmp, true);
+                              rmp->_vl_msg_id = htons(rmp->_vl_msg_id);
+                              rmp->context = htonl(rmp->context);
+                          }));
+@@ -158,7 +158,7 @@ static void send_interfaces_details(u32 index, vl_api_registration_t *rp,
+ 
+             /* Endian hack until apigen registers _details
+              * endian functions */
+-            vl_api_pnat_interfaces_details_t_endian(rmp);
++            vl_api_pnat_interfaces_details_t_endian(rmp, true);
+             rmp->_vl_msg_id = htons(rmp->_vl_msg_id);
+             rmp->context = htonl(rmp->context);
+         }));
+diff --git a/src/tools/vppapigen/vppapigen_c.py b/src/tools/vppapigen/vppapigen_c.py
+index 4278217bb..67db17554 100755
+--- a/src/tools/vppapigen/vppapigen_c.py
++++ b/src/tools/vppapigen/vppapigen_c.py
+@@ -1145,8 +1145,29 @@ ENDIAN_STRINGS = {
+     "f64": "clib_net_to_host_f64",
+ }
+ 
++def dynamic_array_len(o, block, host_to_net_var=False):
++    prefix = ""
++    if host_to_net_var:
++        prefix = f"{host_to_net_var} ? a->{o.lengthfield} : "
++    m = list(
++        filter(lambda x: x.fieldname == o.lengthfield, block)
++    )
++    if len(m) != 1:
++        raise Exception(
++            f"Expected 1 match for field '{o.lengthfield}', got '{m}'"
++        )
++    lf = m[0]
++    if lf.fieldtype in ENDIAN_STRINGS:
++        return f"{prefix}{ENDIAN_STRINGS[lf.fieldtype]}(a->{o.lengthfield})", True
++    elif lf.fieldtype == "u8":
++        return f"a->{o.lengthfield}", False
++    else:
++        raise Exception(
++            f"Don't know how to endian swap {lf.fieldtype}"
++        )
+ 
+-def endianfun_array(o):
++
++def endianfun_array(o, block):
+     """Generate endian functions for arrays"""
+     forloop = """\
+     for (i = 0; i < {length}; i++) {{
+@@ -1156,34 +1177,45 @@ def endianfun_array(o):
+ 
+     forloop_format = """\
+     for (i = 0; i < {length}; i++) {{
+-        {type}_endian(&a->{name}[i]);
++        {type}_endian(&a->{name}[i], host_to_net);
+     }}
+ """
+ 
++    len_var = """\
++    int len = {length};
++"""
++
+     output = ""
+     if o.fieldtype == "u8" or o.fieldtype == "string" or o.fieldtype == "bool":
+         output += "    /* a->{n} = a->{n} (no-op) */\n".format(n=o.fieldname)
+     else:
+-        lfield = "a->" + o.lengthfield if o.lengthfield else o.length
++        if not o.lengthfield:
++            len_str = o.length
++        else:
++            # TBD: use extra temp var
++            len_str, need_var = dynamic_array_len(o, block, "host_to_net")
++            if need_var:
++                output += len_var.format(length=len_str)
++                len_str = "len"
+         if o.fieldtype in ENDIAN_STRINGS:
+             output += forloop.format(
+-                length=lfield, format=ENDIAN_STRINGS[o.fieldtype], name=o.fieldname
++                length=len_str, format=ENDIAN_STRINGS[o.fieldtype], name=o.fieldname
+             )
+         else:
+             output += forloop_format.format(
+-                length=lfield, type=o.fieldtype, name=o.fieldname
++                length=len_str, type=o.fieldtype, name=o.fieldname
+             )
+     return output
+ 
+ 
+-NO_ENDIAN_CONVERSION = {"client_index": None}
++NO_ENDIAN_CONVERSION = set(["client_index"])
+ 
+ 
+-def endianfun_obj(o):
++def endianfun_obj(o, block):
+     """Generate endian conversion function for type"""
+     output = ""
+     if o.type == "Array":
+-        return endianfun_array(o)
++        return endianfun_array(o, block)
+     if o.type != "Field":
+         output += '    s = format(s, "\\n{} {} {} (print not implemented");\n'.format(
+             o.type, o.fieldtype, o.fieldname
+@@ -1197,7 +1229,7 @@ def endianfun_obj(o):
+             name=o.fieldname, format=ENDIAN_STRINGS[o.fieldtype]
+         )
+     elif o.fieldtype.startswith("vl_api_"):
+-        output += "    {type}_endian(&a->{name});\n".format(
++        output += "    {type}_endian(&a->{name}, host_to_net);\n".format(
+             type=o.fieldtype, name=o.fieldname
+         )
+     else:
+@@ -1226,7 +1258,7 @@ def endianfun(objs, modulename):
+     output = output.format(module=modulename)
+ 
+     signature = """\
+-static inline void vl_api_{name}_t_endian (vl_api_{name}_t *a)
++static inline void vl_api_{name}_t_endian (vl_api_{name}_t *a, bool host_to_net)
+ {{
+     int i __attribute__((unused));
+ """
+@@ -1265,11 +1297,11 @@ static inline void vl_api_{name}_t_endian (vl_api_{name}_t *a)
+ 
+         # make Array type appear before the others:
+         # some arrays have dynamic length, and we want to iterate over
+-        # them before changing endiann for the length field
++        # them before changing endian for the length field
+         t.block.sort(key=lambda x: x.type)
+ 
+         for o in t.block:
+-            output += endianfun_obj(o)
++            output += endianfun_obj(o, t.block)
+         output += "}\n\n"
+ 
+     output += "\n#endif"
+@@ -1326,24 +1358,10 @@ static inline uword vl_api_{name}_t_calc_size (vl_api_{name}_t *a)
+                         output += f" + {b.fieldtype}_calc_size(&a->{b.fieldname})"
+                 elif b.type == "Array":
+                     if b.lengthfield:
+-                        m = list(
+-                            filter(lambda x: x.fieldname == b.lengthfield, o.block)
++                        len_str, _ = dynamic_array_len(b, o.block)
++                        output += (
++                            f" + {len_str} * sizeof(a->{b.fieldname}[0])"
+                         )
+-                        if len(m) != 1:
+-                            raise Exception(
+-                                f"Expected 1 match for field '{b.lengthfield}', got '{m}'"
+-                            )
+-                        lf = m[0]
+-                        if lf.fieldtype in ENDIAN_STRINGS:
+-                            output += f" + {ENDIAN_STRINGS[lf.fieldtype]}(a->{b.lengthfield}) * sizeof(a->{b.fieldname}[0])"
+-                        elif lf.fieldtype == "u8":
+-                            output += (
+-                                f" + a->{b.lengthfield} * sizeof(a->{b.fieldname}[0])"
+-                            )
+-                        else:
+-                            raise Exception(
+-                                f"Don't know how to endian swap {lf.fieldtype}"
+-                            )
+                     else:
+                         # Fixed length strings decay to nul terminated u8
+                         if b.fieldtype == "string":
+@@ -1814,7 +1832,7 @@ api_{n} (cJSON *o)
+   }}
+ 
+   mp->_vl_msg_id = vac_get_msg_index(VL_API_{N}_CRC);
+-  vl_api_{n}_t_endian(mp);
++  vl_api_{n}_t_endian(mp, true);
+   vac_write((char *)mp, len);
+   cJSON_free(mp);
+ 
+@@ -1829,7 +1847,7 @@ api_{n} (cJSON *o)
+     return 0;
+   }}
+   vl_api_{r}_t *rmp = (vl_api_{r}_t *)p;
+-  vl_api_{r}_t_endian(rmp);
++  vl_api_{r}_t_endian(rmp, false);
+   return vl_api_{r}_t_tojson(rmp);
+ }}
+ 
+@@ -1847,7 +1865,7 @@ api_{n} (cJSON *o)
+       return 0;
+   }}
+   mp->_vl_msg_id = msg_id;
+-  vl_api_{n}_t_endian(mp);
++  vl_api_{n}_t_endian(mp, true);
+   vac_write((char *)mp, len);
+   cJSON_free(mp);
+ 
+@@ -1881,7 +1899,7 @@ api_{n} (cJSON *o)
+             return 0;
+         }}
+         vl_api_{r}_t *rmp = (vl_api_{r}_t *)p;
+-        vl_api_{r}_t_endian(rmp);
++        vl_api_{r}_t_endian(rmp, false);
+         cJSON_AddItemToArray(reply, vl_api_{r}_t_tojson(rmp));
+     }}
+   }}
+@@ -1903,7 +1921,7 @@ api_{n} (cJSON *o)
+   }}
+   mp->_vl_msg_id = msg_id;
+ 
+-  vl_api_{n}_t_endian(mp);
++  vl_api_{n}_t_endian(mp, true);
+   vac_write((char *)mp, len);
+   cJSON_free(mp);
+ 
+@@ -1924,14 +1942,14 @@ api_{n} (cJSON *o)
+     u16 msg_id = ntohs(*((u16 *)p));
+     if (msg_id == reply_msg_id) {{
+         vl_api_{r}_t *rmp = (vl_api_{r}_t *)p;
+-        vl_api_{r}_t_endian(rmp);
++        vl_api_{r}_t_endian(rmp, false);
+         cJSON_AddItemToArray(reply, vl_api_{r}_t_tojson(rmp));
+         break;
+     }}
+ 
+     if (msg_id == details_msg_id) {{
+         vl_api_{d}_t *rmp = (vl_api_{d}_t *)p;
+-        vl_api_{d}_t_endian(rmp);
++        vl_api_{d}_t_endian(rmp, false);
+         cJSON_AddItemToArray(reply, vl_api_{d}_t_tojson(rmp));
+     }}
+   }}
+diff --git a/src/vat2/vat2_helpers.h b/src/vat2/vat2_helpers.h
+index 7b197608a..f362dae4a 100644
+--- a/src/vat2/vat2_helpers.h
++++ b/src/vat2/vat2_helpers.h
+@@ -29,7 +29,7 @@ vat2_control_ping (u32 context)
+     vl_api_control_ping_t mp = {0};
+     mp._vl_msg_id = vac_get_msg_index(VL_API_CONTROL_PING_CRC);
+     mp.context = context;
+-    vl_api_control_ping_t_endian(&mp);
++    vl_api_control_ping_t_endian (&mp, false);
+     vac_write((char *)&mp, sizeof(mp));
+ }
+ 
+diff --git a/src/vlibapi/api_common.h b/src/vlibapi/api_common.h
+index 66a547fb9..66d0b59f5 100644
+--- a/src/vlibapi/api_common.h
++++ b/src/vlibapi/api_common.h
+@@ -241,7 +241,7 @@ typedef struct
+   void *(*fromjson_handler) (cJSON *, int *);
+ 
+   /** Message endian handler vector */
+-  void (*endian_handler) (void *);
++  void (*endian_handler) (void *, bool);
+ 
+   /** Message print function vector */
+   void (*print_handler) (void *, void *);
+@@ -256,7 +256,7 @@ typedef struct
+   int trace_size;
+ 
+   /** Flags */
+-  u8 bounce : 1;	 /**> Don't automatically free message buffer vetor */
++  u8 bounce : 1;	 /**> Don't automatically free message buffer vector */
+   u8 is_mp_safe : 1;	 /**< Message is mp safe vector */
+   u8 is_autoendian : 1;	 /**< Message requires us to do endian conversion */
+   u8 trace_enable : 1;	 /**< trace this message  */
+diff --git a/src/vlibapi/api_helper_macros.h b/src/vlibapi/api_helper_macros.h
+index 9c93d3393..8e656170c 100644
+--- a/src/vlibapi/api_helper_macros.h
++++ b/src/vlibapi/api_helper_macros.h
+@@ -29,9 +29,9 @@
+ 
+ #define _NATIVE_TO_NETWORK(t, rmp)                                            \
+   api_main_t *am = vlibapi_get_main ();                                       \
+-  void (*endian_fp) (void *);                                                 \
++  void (*endian_fp) (void *, bool);                                           \
+   endian_fp = am->msg_data[t + (REPLY_MSG_ID_BASE)].endian_handler;           \
+-  (*endian_fp) (rmp);
++  (*endian_fp) (rmp, true);
+ 
+ #define REPLY_MACRO(msg)                                                      \
+   do                                                                          \
+diff --git a/src/vlibapi/api_shared.c b/src/vlibapi/api_shared.c
+index 73ef3ce54..f5c9ba1e1 100644
+--- a/src/vlibapi/api_shared.c
++++ b/src/vlibapi/api_shared.c
+@@ -234,7 +234,7 @@ vl_msg_api_trace_write_one (api_main_t *am, u8 *msg, FILE *fp)
+ 
+   if (m && m->endian_handler)
+     {
+-      m->endian_handler (tmpmem);
++      m->endian_handler (tmpmem, false);
+     }
+ 
+   if (m && m->tojson_handler)
+@@ -570,7 +570,7 @@ msg_handler_internal (api_main_t *am, void *the_msg, uword msg_len,
+ 	    }
+ 
+ 	  if (m->is_autoendian)
+-	    m->endian_handler (the_msg);
++	    m->endian_handler (the_msg, false);
+ 
+ 	  if (PREDICT_FALSE (vec_len (am->perf_counter_cbs) != 0))
+ 	    clib_call_callbacks (am->perf_counter_cbs, am, id,
+diff --git a/src/vlibmemory/memory_api.c b/src/vlibmemory/memory_api.c
+index 80d8628bf..ab2d144a2 100644
+--- a/src/vlibmemory/memory_api.c
++++ b/src/vlibmemory/memory_api.c
+@@ -832,9 +832,9 @@ vl_mem_api_handler_with_vm_node (api_main_t *am, svm_region_t *vlib_rp,
+ 
+       if (m->is_autoendian)
+ 	{
+-	  void (*endian_fp) (void *);
++	  void (*endian_fp) (void *, bool);
+ 	  endian_fp = am->msg_data[id].endian_handler;
+-	  (*endian_fp) (the_msg);
++	  (*endian_fp) (the_msg, false);
+ 	}
+       if (PREDICT_FALSE (vec_len (am->perf_counter_cbs) != 0))
+ 	clib_call_callbacks (am->perf_counter_cbs, am, id, 0 /* before */);
+diff --git a/src/vlibmemory/vlib_api_cli.c b/src/vlibmemory/vlib_api_cli.c
+index e53ea9598..a31a19b13 100644
+--- a/src/vlibmemory/vlib_api_cli.c
++++ b/src/vlibmemory/vlib_api_cli.c
+@@ -570,7 +570,7 @@ vl_msg_api_process_file (vlib_main_t * vm, u8 * filename,
+ 	    }
+ 	  if (m)
+ 	    {
+-	      m->endian_handler (tmpbuf + sizeof (uword));
++	      m->endian_handler (tmpbuf + sizeof (uword), false);
+ 	    }
+ 	}
+ 
+@@ -707,7 +707,7 @@ vl_msg_print_trace (u8 *msg, void *ctx)
+       clib_memcpy_fast (tmpbuf, msg, msg_length);
+       msg = tmpbuf;
+ 
+-      m->endian_handler (tmpbuf);
++      m->endian_handler (tmpbuf, false);
+     }
+ 
+   handler = is_json ? m->print_json_handler : m->print_handler;
+@@ -860,7 +860,7 @@ vl_msg_exec_json_command (vlib_main_t *vm, cJSON *o)
+ 	}
+ 
+       if (clib_arch_is_little_endian)
+-	m->endian_handler (msg);
++	m->endian_handler (msg, false);
+ 
+       if (!m->handler)
+ 	{
+diff --git a/src/vnet/interface_api.c b/src/vnet/interface_api.c
+index 85df8a682..5a28a4b6e 100644
+--- a/src/vnet/interface_api.c
++++ b/src/vnet/interface_api.c
+@@ -1215,7 +1215,7 @@ out:
+ static void
+ send_interface_tx_placement_details (vnet_hw_if_tx_queue_t **all_queues,
+ 				     u32 index, vl_api_registration_t *rp,
+-				     u32 native_context)
++				     u32 context)
+ {
+   vnet_main_t *vnm = vnet_get_main ();
+   vl_api_sw_interface_tx_placement_details_t *rmp;
+@@ -1224,7 +1224,6 @@ send_interface_tx_placement_details (vnet_hw_if_tx_queue_t **all_queues,
+   uword *bitmap = q[0]->threads;
+   u32 hw_if_index = q[0]->hw_if_index;
+   vnet_hw_interface_t *hw_if = vnet_get_hw_interface (vnm, hw_if_index);
+-  u32 context = clib_host_to_net_u32 (native_context);
+ 
+   n_bits = clib_bitmap_count_set_bits (bitmap);
+   u32 n = n_bits * sizeof (u32);
+@@ -1352,7 +1351,7 @@ vl_api_sw_interface_set_tx_placement_t_handler (
+       break;
+     case VNET_API_ERROR_INVALID_QUEUE:
+       error = clib_error_return (
+-	0, "unknown queue %u on interface %s", queue_id,
++	0, "unknown queue %u on interface %v", queue_id,
+ 	vnet_get_hw_interface (vnet_get_main (), si->hw_if_index)->name);
+       break;
+     default:
+-- 
+2.40.0
+
