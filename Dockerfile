@@ -48,8 +48,11 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
 
 ENV GOPATH /go
 
-RUN go install github.com/onsi/ginkgo/ginkgo@latest && \
+RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
     mv /go/bin/ginkgo /usr/local/bin
+
+RUN go install golang.org/x/tools/gopls@v0.11.0 && \
+    mv /go/bin/gopls /usr/local/bin
 
 FROM build-base-stage AS build-stage
 
