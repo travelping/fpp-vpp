@@ -1,0 +1,147 @@
+From b4d459dc44ae6579797e3f66bb6b7004211a3f2c Mon Sep 17 00:00:00 2001
+From: Florin Coras <fcoras@cisco.com>
+Date: Sat, 24 Jun 2023 14:43:42 -0700
+Subject: [PATCH] udp: pass cless hdr to transport through buffer
+
+Type: improvement
+
+Signed-off-by: Florin Coras <fcoras@cisco.com>
+Signed-off-by: Filip Tehlar <ftehlar@cisco.com>
+Change-Id: I7177ada23e5a69ec8e362ec98b98010c3b44b3d7
+---
+ src/vnet/session/session_node.c |  4 +-
+ src/vnet/udp/udp.c              | 78 +++++++++++++++++++++++++--------
+ 2 files changed, 61 insertions(+), 21 deletions(-)
+
+diff --git a/src/vnet/session/session_node.c b/src/vnet/session/session_node.c
+index 1908a58f0..40f2f9e81 100644
+--- a/src/vnet/session/session_node.c
++++ b/src/vnet/session/session_node.c
+@@ -1125,8 +1125,8 @@ session_tx_fill_buffer (session_worker_t *wrk, session_tx_context_t *ctx,
+ 
+ 	  if (transport_connection_is_cless (ctx->tc))
+ 	    {
+-	      ip_copy (&ctx->tc->rmt_ip, &hdr->rmt_ip, ctx->tc->is_ip4);
+-	      ctx->tc->rmt_port = hdr->rmt_port;
++	      clib_memcpy_fast (data0 - sizeof (session_dgram_hdr_t), hdr,
++				sizeof (*hdr));
+ 	    }
+ 	  hdr->data_offset += n_bytes_read;
+ 	  if (hdr->data_offset == hdr->data_length)
+diff --git a/src/vnet/udp/udp.c b/src/vnet/udp/udp.c
+index 9b2ed886d..71ba7e730 100644
+--- a/src/vnet/udp/udp.c
++++ b/src/vnet/udp/udp.c
+@@ -223,38 +223,66 @@ udp_session_get_listener (u32 listener_index)
+ }
+ 
+ always_inline u32
+-udp_push_one_header (vlib_main_t *vm, udp_connection_t *uc, vlib_buffer_t *b)
++udp_push_one_header (vlib_main_t *vm, udp_connection_t *uc, vlib_buffer_t *b,
++		     u8 is_cless)
+ {
+-  vlib_buffer_push_udp (b, uc->c_lcl_port, uc->c_rmt_port, 1);
+-  if (uc->c_is_ip4)
+-    vlib_buffer_push_ip4_custom (vm, b, &uc->c_lcl_ip4, &uc->c_rmt_ip4,
+-				 IP_PROTOCOL_UDP, 1 /* csum offload */,
+-				 0 /* is_df */, uc->c_dscp);
+-  else
+-    vlib_buffer_push_ip6 (vm, b, &uc->c_lcl_ip6, &uc->c_rmt_ip6,
+-			  IP_PROTOCOL_UDP);
+-  vnet_buffer (b)->sw_if_index[VLIB_RX] = uc->sw_if_index;
+-  vnet_buffer (b)->sw_if_index[VLIB_TX] = uc->c_fib_index;
+   b->flags |= VNET_BUFFER_F_LOCALLY_ORIGINATED;
++  /* reuse tcp medatada for now */
++  vnet_buffer (b)->tcp.connection_index = uc->c_c_index;
++
++  if (!is_cless)
++    {
++      vlib_buffer_push_udp (b, uc->c_lcl_port, uc->c_rmt_port, 1);
++
++      if (uc->c_is_ip4)
++	vlib_buffer_push_ip4_custom (vm, b, &uc->c_lcl_ip4, &uc->c_rmt_ip4,
++				     IP_PROTOCOL_UDP, 1,
++				     0 /* is_df */, uc->c_dscp);
++      else
++	vlib_buffer_push_ip6 (vm, b, &uc->c_lcl_ip6, &uc->c_rmt_ip6,
++			      IP_PROTOCOL_UDP);
++
++      vnet_buffer (b)->tcp.flags = 0;
++    }
++  else
++    {
++      u8 *data = vlib_buffer_get_current (b);
++      session_dgram_hdr_t hdr;
++
++      hdr = *(session_dgram_hdr_t *) (data - sizeof (hdr));
++
++      /* Local port assumed to be bound, not overwriting it */
++      vlib_buffer_push_udp (b, uc->c_lcl_port, hdr.rmt_port, 1);
++
++      if (uc->c_is_ip4)
++	vlib_buffer_push_ip4_custom (vm, b, &hdr.lcl_ip.ip4, &hdr.rmt_ip.ip4,
++				     IP_PROTOCOL_UDP, 1,
++				     0 /* is_df */, uc->c_dscp);
++      else
++	vlib_buffer_push_ip6 (vm, b, &hdr.lcl_ip.ip6, &hdr.rmt_ip.ip6,
++			      IP_PROTOCOL_UDP);
++
++      /* Not connected udp session. Mark buffer for custom handling in
++       * udp_output */
++      vnet_buffer (b)->tcp.flags |= UDP_CONN_F_LISTEN;
++    }
+ 
+   return 0;
+ }
+ 
+-static u32
+-udp_push_header (transport_connection_t *tc, vlib_buffer_t **bs, u32 n_bufs)
++always_inline void
++udp_push_header_batch (udp_connection_t *uc, vlib_buffer_t **bs, u32 n_bufs,
++		       u8 is_cless)
+ {
+   vlib_main_t *vm = vlib_get_main ();
+-  udp_connection_t *uc;
+-
+-  uc = udp_connection_from_transport (tc);
+ 
+   while (n_bufs >= 4)
+     {
+       vlib_prefetch_buffer_header (bs[2], STORE);
+       vlib_prefetch_buffer_header (bs[3], STORE);
+ 
+-      udp_push_one_header (vm, uc, bs[0]);
+-      udp_push_one_header (vm, uc, bs[1]);
++      udp_push_one_header (vm, uc, bs[0], is_cless);
++      udp_push_one_header (vm, uc, bs[1], is_cless);
+ 
+       n_bufs -= 2;
+       bs += 2;
+@@ -264,11 +292,23 @@ udp_push_header (transport_connection_t *tc, vlib_buffer_t **bs, u32 n_bufs)
+       if (n_bufs > 1)
+ 	vlib_prefetch_buffer_header (bs[1], STORE);
+ 
+-      udp_push_one_header (vm, uc, bs[0]);
++      udp_push_one_header (vm, uc, bs[0], is_cless);
+ 
+       n_bufs -= 1;
+       bs += 1;
+     }
++}
++
++static u32
++udp_push_header (transport_connection_t *tc, vlib_buffer_t **bs, u32 n_bufs)
++{
++  udp_connection_t *uc;
++
++  uc = udp_connection_from_transport (tc);
++  if (uc->flags & UDP_CONN_F_CONNECTED)
++    udp_push_header_batch (uc, bs, n_bufs, 0 /* is_cless */);
++  else
++    udp_push_header_batch (uc, bs, n_bufs, 1 /* is_cless */);
+ 
+   if (PREDICT_FALSE (uc->flags & UDP_CONN_F_CLOSING))
+     {
+-- 
+2.40.0
+
