@@ -132,6 +132,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
+    /debs/python3-vpp-api_*.deb \
     ${extra_debs} && \
     apt-get clean
 
