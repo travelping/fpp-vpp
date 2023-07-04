@@ -115,8 +115,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     apt-get install --no-install-recommends -yy liblz4-tool tar gdb gdbserver strace \
     libhyperscan5 libmbedcrypto3 libmbedtls12 libmbedx509-0 apt-utils \
     libpython3-stdlib \
-    python python-cffi python-cffi-backend python-ipaddress \
-    python-ply python-pycparser \
     python3 python3-minimal python3.6 python3-minimal \
     python3-cffi python3-cffi-backend libnuma1
 
@@ -134,7 +132,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     /debs/vpp-plugin-devtools_*.deb \
     /debs/vpp-plugin-dpdk*.deb \
     /debs/libvppinfra_*.deb \
-    /debs/python3-vpp-api_*.deb \
     ${extra_debs} && \
     apt-get clean
 
