@@ -22,9 +22,9 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-	    build-essential sudo git netbase curl ca-certificates \
-            ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
-            dumb-init gdbserver clang-9 && \
+    build-essential sudo git netbase curl ca-certificates \
+    ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
+    dumb-init gdbserver clang-9 && \
     curl -sSL "https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz" | \
     tar -xvz -C /usr/local bin/buildctl && \
     echo "${BUILDCTL_SHA256}  /usr/local/bin/buildctl" | sha256sum -c && \
@@ -114,9 +114,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     apt-get update && apt-get dist-upgrade -yy && \
     apt-get install --no-install-recommends -yy liblz4-tool tar gdb gdbserver strace \
     libhyperscan5 libmbedcrypto3 libmbedtls12 libmbedx509-0 apt-utils \
-    libpython2.7-minimal libpython2-stdlib libpython3-stdlib \
-    python python-cffi python-cffi-backend python-ipaddress \
-    python2-minimal python-ply python-pycparser python2.7 python2.7-minimal \
+    libpython3-stdlib \
     python3 python3-minimal python3.6 python3-minimal \
     python3-cffi python3-cffi-backend libnuma1
 
@@ -125,7 +123,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/debs,source=/out/debs,from=build-stage,type=bind \
     extra_debs=; \
     if [ "${BUILD_TYPE}" = "debug" ]; then \
-      extra_debs="/debs/vpp-dev_*.deb /debs/libvppinfra-dev_*.deb"; \
+    extra_debs="/debs/vpp-dev_*.deb /debs/libvppinfra-dev_*.deb"; \
     fi && \
     apt-get install --no-install-recommends -yy \
     /debs/vpp_*.deb \
