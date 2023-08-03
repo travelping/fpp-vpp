@@ -1,0 +1,59 @@
+From d2d0130cc259c5d08e9e2dc18e6e0dd2a3c829c5 Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Fri, 4 Aug 2023 01:52:01 +0400
+Subject: [PATCH] [testing] spinlock debugging
+
+---
+ src/vppinfra/lock.h | 9 ---------
+ 1 file changed, 9 deletions(-)
+
+diff --git a/src/vppinfra/lock.h b/src/vppinfra/lock.h
+index b7b3d00a9..204585184 100644
+--- a/src/vppinfra/lock.h
++++ b/src/vppinfra/lock.h
+@@ -27,7 +27,6 @@
+ #define CLIB_PAUSE()
+ #endif
+ 
+-#if CLIB_DEBUG > 1
+ #define CLIB_LOCK_DBG(_p)				\
+ do {							\
+     (*_p)->frame_address = __builtin_frame_address (0);	\
+@@ -40,10 +39,6 @@ do {							\
+     (*_p)->pid = 0;					\
+     (*_p)->thread_index = 0;				\
+ } while (0)
+-#else
+-#define CLIB_LOCK_DBG(_p)
+-#define CLIB_LOCK_DBG_CLEAR(_p)
+-#endif
+ 
+ #define CLIB_SPINLOCK_IS_LOCKED(_p) (*(_p))->lock
+ #define CLIB_SPINLOCK_ASSERT_LOCKED(_p) ASSERT(CLIB_SPINLOCK_IS_LOCKED((_p)))
+@@ -52,11 +47,9 @@ struct clib_spinlock_s
+ {
+   CLIB_CACHE_LINE_ALIGN_MARK (cacheline0);
+   u32 lock;
+-#if CLIB_DEBUG > 0
+   pid_t pid;
+   uword thread_index;
+   void *frame_address;
+-#endif
+ };
+ 
+ typedef struct clib_spinlock_s *clib_spinlock_t;
+@@ -141,11 +134,9 @@ typedef struct clib_rw_lock_
+   CLIB_CACHE_LINE_ALIGN_MARK (cacheline0);
+   /* -1 when W lock held, > 0 when R lock held */
+   volatile i32 rw_cnt;
+-#if CLIB_DEBUG > 0
+   pid_t pid;
+   uword thread_index;
+   void *frame_address;
+-#endif
+ } *clib_rwlock_t;
+ 
+ always_inline void
+-- 
+2.40.0
+
