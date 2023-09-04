@@ -1,0 +1,33 @@
+From d3ce0ac95a16632787b6172e0c3c6eb9a996ef6d Mon Sep 17 00:00:00 2001
+From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
+Date: Mon, 4 Sep 2023 11:40:28 +0400
+Subject: [PATCH] ip: fix crash in ip4_neighbor_advertise
+
+ip4_sas_by_sw_if_index() call with dst == 0 was causing VPP to crash
+
+Type: fix
+
+Signed-Off-By: Ivan Shvedunov <ivan4th@gmail.com>
+---
+ src/vnet/ip/ip_sas.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/vnet/ip/ip_sas.c b/src/vnet/ip/ip_sas.c
+index 0fc261724..e32b8e317 100644
+--- a/src/vnet/ip/ip_sas.c
++++ b/src/vnet/ip/ip_sas.c
+@@ -127,6 +127,11 @@ ip4_sas_by_sw_if_index (u32 sw_if_index, const ip4_address_t *dst,
+       if (ia->flags & IP_INTERFACE_ADDRESS_FLAG_STALE)
+ 	continue;
+       tmp = ip_interface_address_get_address (lm4, ia);
++      if (dst == 0)
++	{
++	  bestsrc = tmp;
++	  break;
++	}
+       l = ip4_sas_commonlen (tmp, dst);
+       if (l > bestlen || bestsrc == 0)
+ 	{
+-- 
+2.40.0
+
