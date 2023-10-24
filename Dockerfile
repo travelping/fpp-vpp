@@ -24,7 +24,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential sudo git netbase curl ca-certificates \
     ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
-    dumb-init gdbserver clang-9 && \
+    dumb-init gdbserver clang-11 && \
     curl -sSL "https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz" | \
     tar -xvz -C /usr/local bin/buildctl && \
     echo "${BUILDCTL_SHA256}  /usr/local/bin/buildctl" | sha256sum -c && \
