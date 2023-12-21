@@ -41,6 +41,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     git commit -m "dummy commit" && \
     git tag -a v20.05-rc0 -m "dummy tag" && \
     make UNATTENDED=yes install-dep install-ext-dep && \
+    apt-get install -y clangd-11 clang-format-11 && \
     apt-get clean && \
     rm -rf /vpp-src && \
     ln -s /usr/lib/go-1.18/bin/go /usr/bin/go && \
