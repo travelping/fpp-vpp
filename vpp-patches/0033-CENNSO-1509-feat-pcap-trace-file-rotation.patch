@@ -1,0 +1,168 @@
+From 0a00bf23646983655a4227f2295778861fbb1aed Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Tue, 16 Jan 2024 20:01:01 +0100
+Subject: [PATCH] [CENNSO-1509] feat: pcap trace file rotation
+
+Implement `rotation` option for `pcap trace` command to dump pcap
+buffer to file and switch to new file as soon as `max` packets reached
+---
+ src/vnet/interface.h       |  2 ++
+ src/vnet/interface_cli.c   |  8 +++++++-
+ src/vnet/interface_funcs.h | 15 +++++++++++++++
+ src/vppinfra/pcap.c        | 19 ++++++++++++++++---
+ src/vppinfra/pcap.h        |  2 ++
+ 5 files changed, 42 insertions(+), 4 deletions(-)
+
+diff --git a/src/vnet/interface.h b/src/vnet/interface.h
+index c8fbc61ec..759a2d204 100644
+--- a/src/vnet/interface.h
++++ b/src/vnet/interface.h
+@@ -1095,6 +1095,8 @@ typedef struct
+   u32 sw_if_index;
+   int filter;
+   vlib_error_t drop_err;
++
++  u8 rotation_enable;
+ } vnet_pcap_dispatch_trace_args_t;
+ 
+ int vnet_pcap_dispatch_trace_configure (vnet_pcap_dispatch_trace_args_t *);
+diff --git a/src/vnet/interface_cli.c b/src/vnet/interface_cli.c
+index 3515c395e..117a477a9 100644
+--- a/src/vnet/interface_cli.c
++++ b/src/vnet/interface_cli.c
+@@ -2186,6 +2186,8 @@ vnet_pcap_dispatch_trace_configure (vnet_pcap_dispatch_trace_args_t * a)
+       pp->pcap_tx_enable = a->tx_enable;
+       pp->pcap_drop_enable = a->drop_enable;
+       pp->max_bytes_per_pkt = a->max_bytes_per_pkt;
++
++      pm->rotation_enable = a->rotation_enable;
+     }
+   else
+     {
+@@ -2234,6 +2236,7 @@ pcap_trace_command_fn (vlib_main_t * vm,
+   int rv;
+   int rx_enable = 0;
+   int tx_enable = 0;
++  int rotation_enable = 0;
+   int preallocate_data = 0;
+   int drop_enable = 0;
+   int status = 0;
+@@ -2252,6 +2255,8 @@ pcap_trace_command_fn (vlib_main_t * vm,
+ 	rx_enable = 1;
+       else if (unformat (line_input, "tx"))
+ 	tx_enable = 1;
++      else if (unformat (line_input, "rotation"))
++	rotation_enable = 1;
+       else if (unformat (line_input, "drop"))
+ 	drop_enable = 1;
+       else if (unformat (line_input, "off"))
+@@ -2309,6 +2314,7 @@ pcap_trace_command_fn (vlib_main_t * vm,
+   a->filter = filter;
+   a->max_bytes_per_pkt = max_bytes_per_pkt;
+   a->drop_err = drop_err;
++  a->rotation_enable = rotation_enable;
+ 
+   rv = vnet_pcap_dispatch_trace_configure (a);
+ 
+@@ -2433,7 +2439,7 @@ VLIB_CLI_COMMAND (pcap_tx_trace_command, static) = {
+     .short_help =
+     "pcap trace [rx] [tx] [drop] [off] [max <nn>] [intfc <interface>|any]\n"
+     "           [file <name>] [status] [max-bytes-per-pkt <nnnn>][filter]\n"
+-    "           [preallocate-data][free-data]",
++    "           [preallocate-data][free-data] [rotation]",
+     .function = pcap_trace_command_fn,
+ };
+ /* *INDENT-ON* */
+diff --git a/src/vnet/interface_funcs.h b/src/vnet/interface_funcs.h
+index 02d80996a..8e7474ae4 100644
+--- a/src/vnet/interface_funcs.h
++++ b/src/vnet/interface_funcs.h
+@@ -544,6 +544,21 @@ pcap_add_buffer (pcap_main_t *pm, struct vlib_main_t *vm, u32 buffer_index,
+   f64 time_now = vlib_time_now (vm);
+   void *d;
+ 
++  if (pm->rotation_enable)
++    {
++      if (PREDICT_FALSE (pm->n_packets_captured >= pm->n_packets_to_capture))
++        {
++          clib_spinlock_lock_if_init (&pm->lock);
++
++          if (pm->n_packets_captured >= pm->n_packets_to_capture)
++            pcap_write(pm);
++
++          pm->flags &= ~PCAP_MAIN_INIT_DONE;
++
++          clib_spinlock_unlock_if_init (&pm->lock);
++        }
++    }
++
+   if (PREDICT_TRUE (pm->n_packets_captured < pm->n_packets_to_capture))
+     {
+       time_now += vm->clib_time.init_reference_time;
+diff --git a/src/vppinfra/pcap.c b/src/vppinfra/pcap.c
+index 4f8b6bb42..13a2896b7 100644
+--- a/src/vppinfra/pcap.c
++++ b/src/vppinfra/pcap.c
+@@ -39,6 +39,8 @@
+ 
+ #include <sys/fcntl.h>
+ #include <vppinfra/pcap.h>
++#include <vppinfra/format.h>
++#include <vppinfra/time.h>
+ 
+ /**
+  * @file
+@@ -98,15 +100,23 @@ pcap_write (pcap_main_t * pm)
+       if (!pm->file_name)
+ 	pm->file_name = "/tmp/vnet.pcap";
+ 
++      char *fname = pm->file_name;
++
++      if (pm->rotation_enable)
++	fname = (char*) format(0, "%s.%f.pcap%c", pm->file_name, unix_time_now(), 0);
++
+       pm->file_descriptor =
+-	open (pm->file_name, O_CREAT | O_TRUNC | O_WRONLY, 0664);
++	open ((char*) fname, O_CREAT | O_TRUNC | O_WRONLY, 0664);
+       if (pm->file_descriptor < 0)
+ 	{
+ 	  error =
+-	    clib_error_return_unix (0, "failed to open `%s'", pm->file_name);
++	    clib_error_return_unix (0, "failed to open `%s'", fname);
+ 	  goto done;
+ 	}
+ 
++      if (pm->rotation_enable)
++	vec_free (fname);
++
+       pm->flags |= PCAP_MAIN_INIT_DONE;
+       pm->n_packets_captured = 0;
+       pm->n_pcap_data_written = 0;
+@@ -161,7 +171,10 @@ done:
+   if (error)
+     {
+       if (pm->file_descriptor >= 0)
+-	close (pm->file_descriptor);
++	{
++	  close (pm->file_descriptor);
++	  pm->file_descriptor = -1;
++	}
+     }
+   return error;
+ }
+diff --git a/src/vppinfra/pcap.h b/src/vppinfra/pcap.h
+index c3e1fef71..6b6c439bf 100644
+--- a/src/vppinfra/pcap.h
++++ b/src/vppinfra/pcap.h
+@@ -191,6 +191,8 @@ typedef struct
+ 
+   /** Min/Max Packet bytes */
+   u32 min_packet_bytes, max_packet_bytes;
++
++  u8 rotation_enable;
+ } pcap_main_t;
+ 
+ #define PCAP_DEF_PKT_TO_CAPTURE (100)
+-- 
+2.43.0
+
