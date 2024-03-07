@@ -1,0 +1,24 @@
+From 636add9625434751d831b972fb66240748d86bea Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Thu, 7 Mar 2024 13:24:13 +0100
+Subject: [PATCH] print barrier holder on error
+
+---
+ src/vlib/threads.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/vlib/threads.c b/src/vlib/threads.c
+index adf225ba8..93851dacd 100644
+--- a/src/vlib/threads.c
++++ b/src/vlib/threads.c
+@@ -1261,6 +1261,7 @@ vlib_worker_thread_initial_barrier_sync_and_release (vlib_main_t * vm)
+     {
+       if ((now = vlib_time_now (vm)) > deadline)
+ 	{
++	  fformat(stderr, "worker thread barrier held by %s", vlib_worker_threads[0].barrier_caller);
+ 	  fformat (stderr, "%s: worker thread deadlock\n", __FUNCTION__);
+ 	  os_panic ();
+ 	}
+-- 
+2.44.0
+
