@@ -1,0 +1,29 @@
+From b55e9b395d854a39d3ad5317883158e476576623 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Wed, 17 Apr 2024 15:30:40 +0200
+Subject: [PATCH] [CENNSO-1969] fix: avoid scan of PCI devices
+
+Only if no pci drivers registered, what usually
+the case
+---
+ src/vlib/linux/pci.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/vlib/linux/pci.c b/src/vlib/linux/pci.c
+index 9f0629f46..8442bf984 100644
+--- a/src/vlib/linux/pci.c
++++ b/src/vlib/linux/pci.c
+@@ -1545,6 +1545,10 @@ linux_pci_init (vlib_main_t * vm)
+ 
+   ASSERT (sizeof (vlib_pci_addr_t) == sizeof (u32));
+ 
++  // avoid iterating over devices if we don't have registration
++  if (!pm->pci_device_registrations)
++    return 0;
++
+   addrs = vlib_pci_get_all_dev_addrs ();
+   /* *INDENT-OFF* */
+   vec_foreach (addr, addrs)
+-- 
+2.44.0
+
