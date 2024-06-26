@@ -8,7 +8,7 @@ ENV BUILDCTL_SHA256 "b64aec46fb438ea844616b3205c33b01a3a49ea7de1f8539abd0daeb4f0
 ENV INDENT_SHA256 "12185be748db620f8f7799ea839f0d10ce643b9f5ab1805c960e56eb27941236"
 ENV LIBC_SHA256 "9a8caf9f33448a8f2f526e94d00c70cdbdd735caec510df57b3283413df7882a"
 # Go version in ppa:longsleep/golang-backports
-ENV GO_PACKAGE "golang-1.18-go"
+ENV GO_PACKAGE "golang-1.22-go"
 
 COPY vpp/Makefile /vpp-src/Makefile
 COPY vpp/build/external /vpp-src/build/external
@@ -43,8 +43,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     make UNATTENDED=yes install-dep install-ext-dep && \
     apt-get clean && \
     rm -rf /vpp-src && \
-    ln -s /usr/lib/go-1.18/bin/go /usr/bin/go && \
-    ln -s /usr/lib/go-1.18/bin/gofmt /usr/bin/gofmt
+    ln -s /usr/lib/go-1.22/bin/go /usr/bin/go && \
+    ln -s /usr/lib/go-1.22/bin/gofmt /usr/bin/gofmt
 
 ENV GOPATH /go
 
@@ -116,7 +116,8 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     libhyperscan5 libmbedcrypto3 libmbedtls12 libmbedx509-0 apt-utils \
     libpython3-stdlib \
     python3 python3-minimal python3.6 python3-minimal \
-    python3-cffi python3-cffi-backend libnuma1
+    python3-cffi python3-cffi-backend libnuma1 \
+    libnl-3-200 libnl-route-3-200 libpcap0.8
 
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \
