@@ -1,4 +1,4 @@
-From 90a91314c7b15caae55e90ed181cb69eb343bced Mon Sep 17 00:00:00 2001
+From 107689150063f5afb9bb8f3584c29fad3855e505 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Tue, 9 Nov 2021 12:27:04 +0300
 Subject: [PATCH] vnet: include fib_entry_track/fib_path/fib_walk headers in
@@ -12,10 +12,10 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/src/vnet/CMakeLists.txt b/src/vnet/CMakeLists.txt
-index ef187dc2f..8a1133739 100644
+index 322554016..fcf986bbe 100644
 --- a/src/vnet/CMakeLists.txt
 +++ b/src/vnet/CMakeLists.txt
-@@ -1220,10 +1220,12 @@ list(APPEND VNET_HEADERS
+@@ -1171,10 +1171,12 @@ list(APPEND VNET_HEADERS
    fib/fib_node_list.h
    fib/fib_entry.h
    fib/fib_entry_delegate.h
@@ -29,5 +29,5 @@ index ef187dc2f..8a1133739 100644
  
  list(APPEND VNET_API_FILES
 -- 
-2.30.2
+2.45.2
 

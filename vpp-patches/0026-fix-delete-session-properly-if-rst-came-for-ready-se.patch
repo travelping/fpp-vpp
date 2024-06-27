@@ -1,0 +1,32 @@
+From 444905e6b7c0956f13f13388fc5cbf59412737d0 Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Mon, 3 Jun 2024 20:11:39 +0200
+Subject: [PATCH] fix: delete session properly if rst came for ready session
+
+---
+ src/vnet/tcp/tcp_input.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/vnet/tcp/tcp_input.c b/src/vnet/tcp/tcp_input.c
+index c069a9b08..82f1c2ece 100644
+--- a/src/vnet/tcp/tcp_input.c
++++ b/src/vnet/tcp/tcp_input.c
+@@ -114,10 +114,15 @@ tcp_update_timestamp (tcp_connection_t * tc, u32 seq, u32 seq_end)
+ static void
+ tcp_handle_rst (tcp_connection_t * tc)
+ {
++  transport_connection_t *tc1 = &tc->connection;
++  session_t *s;
+   switch (tc->rst_state)
+     {
+     case TCP_STATE_SYN_RCVD:
+       /* Cleanup everything. App wasn't notified yet */
++      s = session_get (tc1->s_index, tc1->thread_index);
++      if(s->session_state == SESSION_STATE_READY)
++        session_transport_closed_notify (&tc->connection);
+       session_transport_delete_notify (&tc->connection);
+       tcp_connection_cleanup (tc);
+       break;
+-- 
+2.45.2
+

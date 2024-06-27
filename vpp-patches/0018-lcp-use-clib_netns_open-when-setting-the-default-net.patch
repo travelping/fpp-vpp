@@ -1,4 +1,4 @@
-From e0bd051da42989b3cde3105bbe73fe5183dc768c Mon Sep 17 00:00:00 2001
+From 06ae88a7c57216952b8f8fae116e3d00baa2d2e3 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 17 Feb 2023 23:26:55 +0400
 Subject: [PATCH] lcp: use clib_netns_open() when setting the default netns
@@ -13,7 +13,7 @@ Signed-Off-By: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 5 insertions(+), 6 deletions(-)
 
 diff --git a/src/plugins/linux-cp/lcp.c b/src/plugins/linux-cp/lcp.c
-index 33c71e441..be40fc28c 100644
+index 561ebb152..fa37041b2 100644
 --- a/src/plugins/linux-cp/lcp.c
 +++ b/src/plugins/linux-cp/lcp.c
 @@ -19,6 +19,8 @@
@@ -56,5 +56,5 @@ index 33c71e441..be40fc28c 100644
    return 0;
  }
 -- 
-2.30.2
+2.45.2
 

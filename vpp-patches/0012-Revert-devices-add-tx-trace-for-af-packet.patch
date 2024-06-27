@@ -1,18 +1,18 @@
-From 683b6989684c751a40526bfbb625690db6f0fc4d Mon Sep 17 00:00:00 2001
+From 4a19730ffe22cdfad008344011fca4f442db5f04 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Wed, 28 Sep 2022 10:57:13 +0500
 Subject: [PATCH] Revert "devices: add tx trace for af-packet"
 
 This reverts commit 9deb2ec335925e02c4e98065b374144b9acda11a.
 ---
- src/vnet/devices/af_packet/device.c | 93 ++---------------------------
- 1 file changed, 6 insertions(+), 87 deletions(-)
+ src/plugins/af_packet/device.c | 158 ++++-----------------------------
+ 1 file changed, 15 insertions(+), 143 deletions(-)
 
-diff --git a/src/vnet/devices/af_packet/device.c b/src/vnet/devices/af_packet/device.c
-index 74bc1c8c4..934c7e89d 100644
---- a/src/vnet/devices/af_packet/device.c
-+++ b/src/vnet/devices/af_packet/device.c
-@@ -56,16 +56,6 @@ static char *af_packet_tx_func_error_strings[] = {
+diff --git a/src/plugins/af_packet/device.c b/src/plugins/af_packet/device.c
+index d76dad3dd..204eb0134 100644
+--- a/src/plugins/af_packet/device.c
++++ b/src/plugins/af_packet/device.c
+@@ -57,21 +57,6 @@ static char *af_packet_tx_func_error_strings[] = {
  #undef _
  };
  
@@ -21,7 +21,12 @@ index 74bc1c8c4..934c7e89d 100644
 -  u32 buffer_index;
 -  u32 hw_if_index;
 -  u16 queue_id;
--  tpacket3_hdr_t tph;
+-  u8 is_v2;
+-  union
+-  {
+-    tpacket2_hdr_t tph2;
+-    tpacket3_hdr_t tph3;
+-  };
 -  vnet_virtio_net_hdr_t vnet_hdr;
 -  vlib_buffer_t buffer;
 -} af_packet_tx_trace_t;
@@ -29,7 +34,7 @@ index 74bc1c8c4..934c7e89d 100644
  #ifndef CLIB_MARCH_VARIANT
  u8 *
  format_af_packet_device_name (u8 * s, va_list * args)
-@@ -167,70 +157,12 @@ format_af_packet_device (u8 * s, va_list * args)
+@@ -196,98 +181,12 @@ format_af_packet_device (u8 * s, va_list * args)
  }
  
  static u8 *
@@ -44,24 +49,46 @@ index 74bc1c8c4..934c7e89d 100644
 -  s = format (s, "af_packet: hw_if_index %u tx-queue %u", t->hw_if_index,
 -	      t->queue_id);
 -
--  s =
--    format (s,
--	    "\n%Utpacket3_hdr:\n%Ustatus 0x%x len %u snaplen %u mac %u net %u"
--	    "\n%Usec 0x%x nsec 0x%x vlan %U"
+-  if (t->is_v2)
+-    {
+-      s = format (
+-	s,
+-	"\n%Utpacket2_hdr:\n%Ustatus 0x%x len %u snaplen %u mac %u net %u"
+-	"\n%Usec 0x%x nsec 0x%x vlan %U"
 -#ifdef TP_STATUS_VLAN_TPID_VALID
--	    " vlan_tpid %u"
+-	" vlan_tpid %u"
 -#endif
--	    ,
--	    format_white_space, indent + 2, format_white_space, indent + 4,
--	    t->tph.tp_status, t->tph.tp_len, t->tph.tp_snaplen, t->tph.tp_mac,
--	    t->tph.tp_net, format_white_space, indent + 4, t->tph.tp_sec,
--	    t->tph.tp_nsec, format_ethernet_vlan_tci, t->tph.hv1.tp_vlan_tci
+-	,
+-	format_white_space, indent + 2, format_white_space, indent + 4,
+-	t->tph2.tp_status, t->tph2.tp_len, t->tph2.tp_snaplen, t->tph2.tp_mac,
+-	t->tph2.tp_net, format_white_space, indent + 4, t->tph2.tp_sec,
+-	t->tph2.tp_nsec, format_ethernet_vlan_tci, t->tph2.tp_vlan_tci
 -#ifdef TP_STATUS_VLAN_TPID_VALID
--	    ,
--	    t->tph.hv1.tp_vlan_tpid
+-	,
+-	t->tph2.tp_vlan_tpid
 -#endif
--    );
--
+-      );
+-    }
+-  else
+-    {
+-      s = format (
+-	s,
+-	"\n%Utpacket3_hdr:\n%Ustatus 0x%x len %u snaplen %u mac %u net %u"
+-	"\n%Usec 0x%x nsec 0x%x vlan %U"
+-#ifdef TP_STATUS_VLAN_TPID_VALID
+-	" vlan_tpid %u"
+-#endif
+-	,
+-	format_white_space, indent + 2, format_white_space, indent + 4,
+-	t->tph3.tp_status, t->tph3.tp_len, t->tph3.tp_snaplen, t->tph3.tp_mac,
+-	t->tph3.tp_net, format_white_space, indent + 4, t->tph3.tp_sec,
+-	t->tph3.tp_nsec, format_ethernet_vlan_tci, t->tph3.hv1.tp_vlan_tci
+-#ifdef TP_STATUS_VLAN_TPID_VALID
+-	,
+-	t->tph3.hv1.tp_vlan_tpid
+-#endif
+-      );
+-    }
 -  s = format (s,
 -	      "\n%Uvnet-hdr:\n%Uflags 0x%02x gso_type 0x%02x hdr_len %u"
 -	      "\n%Ugso_size %u csum_start %u csum_offset %u",
@@ -82,17 +109,23 @@ index 74bc1c8c4..934c7e89d 100644
  
 -static void
 -af_packet_tx_trace (vlib_main_t *vm, vlib_node_runtime_t *node,
--		    vlib_buffer_t *b0, u32 bi, tpacket3_hdr_t *tph,
+-		    vlib_buffer_t *b0, u32 bi, void *tph,
 -		    vnet_virtio_net_hdr_t *vnet_hdr, u32 hw_if_index,
--		    u16 queue_id)
+-		    u16 queue_id, u8 is_v2)
 -{
 -  af_packet_tx_trace_t *t;
 -  t = vlib_add_trace (vm, node, b0, sizeof (t[0]));
 -  t->hw_if_index = hw_if_index;
 -  t->queue_id = queue_id;
 -  t->buffer_index = bi;
+-  t->is_v2 = is_v2;
 -
--  clib_memcpy_fast (&t->tph, tph, sizeof (*tph));
+-  if (is_v2)
+-    clib_memcpy_fast (&t->tph2, (tpacket2_hdr_t *) tph,
+-		      sizeof (tpacket2_hdr_t));
+-  else
+-    clib_memcpy_fast (&t->tph3, (tpacket3_hdr_t *) tph,
+-		      sizeof (tpacket3_hdr_t));
 -  clib_memcpy_fast (&t->vnet_hdr, vnet_hdr, sizeof (*vnet_hdr));
 -  clib_memcpy_fast (&t->buffer, b0, sizeof (*b0) - sizeof (b0->pre_data));
 -  clib_memcpy_fast (t->buffer.pre_data, vlib_buffer_get_current (b0),
@@ -102,50 +135,102 @@ index 74bc1c8c4..934c7e89d 100644
  static_always_inline void
  fill_gso_offload (vlib_buffer_t *b0, vnet_virtio_net_hdr_t *vnet_hdr)
  {
-@@ -344,10 +276,9 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
-       u32 len;
-       vnet_virtio_net_hdr_t *vnet_hdr = 0;
-       u32 offset = 0;
--      vlib_buffer_t *b0 = 0, *b0_first = 0;
--      u32 bi, bi_first;
+@@ -418,7 +317,7 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	  u32 len;
+ 	  vnet_virtio_net_hdr_t *vnet_hdr = 0;
+ 	  u32 offset = 0;
+-	  vlib_buffer_t *b0 = 0, *b0_first = 0;
++	  vlib_buffer_t *b0 = 0;
+ 	  u32 bi, bi_first;
+ 
+ 	  bi = bi_first = buffers[0];
+@@ -433,7 +332,7 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	      goto nextv2;
+ 	    }
+ 
+-	  b0_first = b0 = vlib_get_buffer (vm, bi);
++	  b0 = vlib_get_buffer (vm, bi);
+ 
+ 	  if (PREDICT_TRUE (is_cksum_gso_enabled))
+ 	    {
+@@ -467,19 +366,6 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	  tph2->tp_status = TP_STATUS_SEND_REQUEST;
+ 	  n_sent++;
+ 
+-	  if (PREDICT_FALSE (b0_first->flags & VLIB_BUFFER_IS_TRACED))
+-	    {
+-	      if (PREDICT_TRUE (is_cksum_gso_enabled))
+-		af_packet_tx_trace (vm, node, b0_first, bi_first, tph2,
+-				    vnet_hdr, apif->hw_if_index, queue_id, 1);
+-	      else
+-		{
+-		  vnet_virtio_net_hdr_t vnet_hdr2 = {};
+-		  af_packet_tx_trace (vm, node, b0_first, bi_first, tph2,
+-				      &vnet_hdr2, apif->hw_if_index, queue_id,
+-				      1);
+-		}
+-	    }
+ 	  tx_frame = (tx_frame + 1) % frame_num;
+ 
+ 	nextv2:
+@@ -492,17 +378,16 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+     {
+       tpacket_align = TPACKET_ALIGN (sizeof (tpacket3_hdr_t));
+ 
+-      while (n_left)
+-	{
+-	  u32 len;
+-	  vnet_virtio_net_hdr_t *vnet_hdr = 0;
+-	  u32 offset = 0;
+-	  vlib_buffer_t *b0 = 0, *b0_first = 0;
+-	  u32 bi, bi_first;
++  while (n_left)
++    {
++      u32 len;
++      vnet_virtio_net_hdr_t *vnet_hdr = 0;
++      u32 offset = 0;
 +      vlib_buffer_t *b0 = 0;
 +      u32 bi = buffers[0];
  
--      bi = bi_first = buffers[0];
-       n_left--;
-       buffers++;
+-	  bi = bi_first = buffers[0];
+-	  n_left--;
+-	  buffers++;
++      n_left--;
++      buffers++;
  
-@@ -359,9 +290,9 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
- 	  goto next;
- 	}
+ 	  tph3 = (tpacket3_hdr_t *) (block_start + tx_frame * frame_size);
+ 	  if (PREDICT_FALSE (tph3->tp_status &
+@@ -512,7 +397,7 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	      goto nextv3;
+ 	    }
  
--      b0_first = b0 = vlib_get_buffer (vm, bi);
+-	  b0_first = b0 = vlib_get_buffer (vm, bi);
 +      b0 = vlib_get_buffer (vm, bi);
  
--      if (PREDICT_TRUE (is_cksum_gso_enabled))
-+      if (is_cksum_gso_enabled)
- 	{
- 	  vnet_hdr =
- 	    (vnet_virtio_net_hdr_t *) ((u8 *) tph + TPACKET_ALIGN (sizeof (
-@@ -396,18 +327,6 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
-       tph->tp_status = TP_STATUS_SEND_REQUEST;
-       n_sent++;
+ 	  if (PREDICT_TRUE (is_cksum_gso_enabled))
+ 	    {
+@@ -546,20 +431,7 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	  tph3->tp_status = TP_STATUS_SEND_REQUEST;
+ 	  n_sent++;
  
--      if (PREDICT_FALSE (b0_first->flags & VLIB_BUFFER_IS_TRACED))
--	{
--	  if (PREDICT_TRUE (is_cksum_gso_enabled))
--	    af_packet_tx_trace (vm, node, b0_first, bi_first, tph, vnet_hdr,
--				apif->hw_if_index, queue_id);
--	  else
+-	  if (PREDICT_FALSE (b0_first->flags & VLIB_BUFFER_IS_TRACED))
 -	    {
--	      vnet_virtio_net_hdr_t vnet_hdr2 = {};
--	      af_packet_tx_trace (vm, node, b0_first, bi_first, tph,
--				  &vnet_hdr2, apif->hw_if_index, queue_id);
+-	      if (PREDICT_TRUE (is_cksum_gso_enabled))
+-		af_packet_tx_trace (vm, node, b0_first, bi_first, tph3,
+-				    vnet_hdr, apif->hw_if_index, queue_id, 0);
+-	      else
+-		{
+-		  vnet_virtio_net_hdr_t vnet_hdr2 = {};
+-		  af_packet_tx_trace (vm, node, b0_first, bi_first, tph3,
+-				      &vnet_hdr2, apif->hw_if_index, queue_id,
+-				      0);
+-		}
 -	    }
--	}
-       tx_frame = (tx_frame + 1) % frame_num;
+-	  tx_frame = (tx_frame + 1) % frame_num;
++      tx_frame = (tx_frame + 1) % frame_num;
  
-     next:
+ 	nextv3:
+ 	  /* check if we've exhausted the ring */
 -- 
-2.30.2
+2.45.2
 

@@ -1,4 +1,4 @@
-From 7925f7f977ccf6e67ac93ac6c29a467edf5a76dc Mon Sep 17 00:00:00 2001
+From 57664ae0814f7251a92e137d36027ecec1febaeb Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Tue, 31 May 2022 11:24:12 +0400
 Subject: [PATCH] nat: fix handling checksum offload in nat44-ed
@@ -10,10 +10,10 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 13 insertions(+), 11 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index 56dfe4556..b6b2ab680 100644
+index 18e7be6d4..210c85ce6 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
-@@ -3928,19 +3928,21 @@ nat_6t_flow_ip4_translate (snat_main_t *sm, vlib_buffer_t *b, ip4_header_t *ip,
+@@ -3983,19 +3983,21 @@ nat_6t_flow_ip4_translate (snat_main_t *sm, vlib_buffer_t *b, ip4_header_t *ip,
  	}
      }
  
@@ -47,5 +47,5 @@ index 56dfe4556..b6b2ab680 100644
  
  static_always_inline int
 -- 
-2.30.2
+2.45.2
 

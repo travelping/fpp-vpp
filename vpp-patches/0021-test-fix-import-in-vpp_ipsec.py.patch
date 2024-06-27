@@ -1,4 +1,4 @@
-From e9334e5f1b5a249e0a85adeaf8cd337b504ab8ab Mon Sep 17 00:00:00 2001
+From 059e086ce72c29b0fbf30ae06eb9b3381b720fe7 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 20 Oct 2023 04:01:30 +0400
 Subject: [PATCH] test: fix import in vpp_ipsec.py
@@ -10,7 +10,7 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/test/vpp_ipsec.py b/test/vpp_ipsec.py
-index eb0209fc5..4030de6c1 100644
+index e354cfc8a..ac589935d 100644
 --- a/test/vpp_ipsec.py
 +++ b/test/vpp_ipsec.py
 @@ -1,3 +1,4 @@
@@ -19,5 +19,5 @@ index eb0209fc5..4030de6c1 100644
  from ipaddress import ip_address
  from vpp_papi import VppEnum
 -- 
-2.40.0
+2.45.2
 

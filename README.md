@@ -1,6 +1,6 @@
 # FPP VPP image source repository
 
-FPP (Fast Path Provider) VPP image source repository contains code with [FD.io VPP](https://s3-docs.fd.io/vpp/22.02/)
+FPP (Fast Path Provider) VPP image source repository contains code with [FD.io VPP](https://s3-docs.fd.io/vpp/24.02/)
 patches and tools to create a container image that runs a modified version of VPP.
 
 User Plane Gateway ([UPG VPP](https://github.com/travelping/upg-vpp)) CNF uses FPP VPP and its patched VPP version
@@ -13,14 +13,14 @@ to implement the required Mobile Core User Plane Function (UPF) features:
 ## Usage
 
 FPP VPP provides a [`Dockerfile`](./Dockerfile) that creates an Ubuntu image with the installed patched VPP version.
-FPP VPP is currently based on VPP version `stable/2210`.
+FPP VPP is currently based on VPP version `stable/2402`.
 
 Build images are stored in the [Travelping's quay](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
 ### Build versioning
 
-For the most stable FPP VPP version, use the release images tagged with the `v22.10.1_release` naming schema.
-Image tagging uses the following convention: `v<vpp-release>.<internal-build>`. For example, `v22.10.1` means that the VPP base version is `22.10`, and `.1` is the internal build number.
+For the most stable FPP VPP version, use the release images tagged with the `v24.02.1_release` naming schema.
+Image tagging uses the following convention: `v<vpp-release>.<internal-build>`. For example, `v24.02.1` means that the VPP base version is `24.02`, and `.1` is the internal build number.
 
 ### Run the built image
 
@@ -32,10 +32,10 @@ Image tagging uses the following convention: `v<vpp-release>.<internal-build>`. 
 Use this command to run the FPP VPP container image on a local machine using Docker:
 
 ```console
-$ docker run -it --rm --privileged --entrypoint /usr/bin/vpp quay.io/travelping/fpp-vpp:v22.02.1_release unix { nodaemon interactive } api-segment { prefix vpp1 } cpu { workers 0 } heapsize 2G
+$ docker run -it --rm --privileged --entrypoint /usr/bin/vpp quay.io/travelping/fpp-vpp:v24.02.1_release unix { nodaemon interactive } api-segment { prefix vpp1 } cpu { workers 0 } heapsize 2G
 ```
 
-This command gives you access to VPP CLI (`vppctl`). To see the list of available commands, read the [VPP CLI](https://s3-docs.fd.io/vpp/22.02/cli-reference/gettingstarted/index.html) documentation. For more information on how to use VPP, see the [VPP tutorial](https://s3-docs.fd.io/vpp/22.02/gettingstarted/progressivevpp/index.html).
+This command gives you access to VPP CLI (`vppctl`). To see the list of available commands, read the [VPP CLI](https://s3-docs.fd.io/vpp/24.02/cli-reference/gettingstarted/index.html) documentation. For more information on how to use VPP, see the [VPP tutorial](https://s3-docs.fd.io/vpp/24.02/gettingstarted/progressivevpp/index.html).
 
 ## Development
 

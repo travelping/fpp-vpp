@@ -1,0 +1,27 @@
+From a3447b5caf136c5108809524b04c34e1599e23b8 Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Sun, 9 Jun 2024 23:51:47 +0200
+Subject: [PATCH] Revert "fib: fix fib_path_create() with drop targets"
+
+This reverts commit 4b08632748727486e7ebfdcf4d992743595bc500.
+---
+ src/vnet/fib/fib_path.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/vnet/fib/fib_path.c b/src/vnet/fib/fib_path.c
+index ee2cc8ef6..9957efb8f 100644
+--- a/src/vnet/fib/fib_path.c
++++ b/src/vnet/fib/fib_path.c
+@@ -1363,8 +1363,7 @@ fib_path_create (fib_node_index_t pl_index,
+ 	dpo_copy(&path->exclusive.fp_ex_dpo, &rpath->dpo);
+     }
+     else if ((path->fp_cfg_flags & FIB_PATH_CFG_FLAG_ICMP_PROHIBIT) ||
+-	(path->fp_cfg_flags & FIB_PATH_CFG_FLAG_ICMP_UNREACH) ||
+-	(path->fp_cfg_flags & FIB_PATH_CFG_FLAG_DROP))
++        (path->fp_cfg_flags & FIB_PATH_CFG_FLAG_ICMP_UNREACH))
+     {
+         path->fp_type = FIB_PATH_TYPE_SPECIAL;
+     }
+-- 
+2.45.2
+

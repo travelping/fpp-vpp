@@ -1,4 +1,4 @@
-From ee75000b4eb26f72e8a81ea03ff3ce31243f631d Mon Sep 17 00:00:00 2001
+From 50ee9198f3f665403ae069b26fd3da583de11d5b Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 14 Oct 2022 19:21:00 +0400
 Subject: [PATCH] vnet: fix returning tag in interface details
@@ -10,10 +10,10 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/src/vnet/interface_api.c b/src/vnet/interface_api.c
-index 5766f2ca2..01ba02656 100644
+index 9f1d43a6c..eed116da0 100644
 --- a/src/vnet/interface_api.c
 +++ b/src/vnet/interface_api.c
-@@ -336,7 +336,8 @@ send_sw_interface_details (vpe_api_main_t * am,
+@@ -339,7 +339,8 @@ send_sw_interface_details (vpe_api_main_t * am,
  
    u8 *tag = vnet_get_sw_interface_tag (vnet_get_main (), swif->sw_if_index);
    if (tag)
@@ -24,5 +24,5 @@ index 5766f2ca2..01ba02656 100644
    vl_api_send_msg (rp, (u8 *) mp);
  }
 -- 
-2.30.2
+2.45.2
 

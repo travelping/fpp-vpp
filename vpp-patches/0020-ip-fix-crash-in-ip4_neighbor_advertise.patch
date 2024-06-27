@@ -1,4 +1,4 @@
-From d3ce0ac95a16632787b6172e0c3c6eb9a996ef6d Mon Sep 17 00:00:00 2001
+From ed7269e5b3b14bb7e54dd376eae8ee52c3881715 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Mon, 4 Sep 2023 11:40:28 +0400
 Subject: [PATCH] ip: fix crash in ip4_neighbor_advertise
@@ -29,5 +29,5 @@ index 0fc261724..e32b8e317 100644
        if (l > bestlen || bestsrc == 0)
  	{
 -- 
-2.40.0
+2.45.2
 
