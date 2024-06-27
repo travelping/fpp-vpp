@@ -1,4 +1,4 @@
-From 1a35d01d884ecde1aa5d66156f0f558abf437732 Mon Sep 17 00:00:00 2001
+From d383b50ea710a070faf0d893985dd942027b39b0 Mon Sep 17 00:00:00 2001
 From: Vladimir Zhigulin <scripath96@gmail.com>
 Date: Wed, 27 Dec 2023 15:23:18 +0100
 Subject: [PATCH] vppinfra: collect heap stats in constant time
@@ -282,5 +282,5 @@ index de7591139..696738e86 100644
  }
  
 -- 
-2.43.0
+2.45.2
 

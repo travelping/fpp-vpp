@@ -1,4 +1,4 @@
-From 5550a621214b3f6b4b209363e9dbc78b3ee1b65c Mon Sep 17 00:00:00 2001
+From 3dbeb0a78cc0ff1602b670c33d40a4eed8b4617e Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 30 Sep 2022 22:29:15 +0400
 Subject: [PATCH] dpdk: fix buffer overrun
@@ -10,7 +10,7 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/src/plugins/dpdk/buffer.c b/src/plugins/dpdk/buffer.c
-index 8b4b4a926..baf7ba591 100644
+index 2379a9aa7..4770b8574 100644
 --- a/src/plugins/dpdk/buffer.c
 +++ b/src/plugins/dpdk/buffer.c
 @@ -93,8 +93,7 @@ dpdk_buffer_pool_init (vlib_main_t * vm, vlib_buffer_pool_t * bp)
@@ -24,5 +24,5 @@ index 8b4b4a926..baf7ba591 100644
    rte_pktmbuf_pool_init (mp, &priv);
    rte_pktmbuf_pool_init (nmp, &priv);
 -- 
-2.30.2
+2.45.2
 

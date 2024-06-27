@@ -1,4 +1,4 @@
-From afc4cf23ae0ccef29b2e36121d78cf5b2472a634 Mon Sep 17 00:00:00 2001
+From e10ebcb41e1c26b825663edfc21a6f7f9be73a30 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Fri, 4 Feb 2022 19:02:09 +0300
 Subject: [PATCH] CI and build infrastructure adjustments
@@ -9,10 +9,10 @@ Subject: [PATCH] CI and build infrastructure adjustments
  2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/Makefile b/Makefile
-index 4d3ba7578..2e2480130 100644
+index 17d633562..6e5ee2fb5 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -73,6 +73,10 @@ DEB_DEPENDS += python3-venv  # ensurepip
+@@ -74,6 +74,10 @@ DEB_DEPENDS += python3-venv  # ensurepip
  DEB_DEPENDS += python3-dev python3-pip
  DEB_DEPENDS += libnl-3-dev libnl-route-3-dev libmnl-dev
  # DEB_DEPENDS += enchant  # for docs
@@ -22,8 +22,8 @@ index 4d3ba7578..2e2480130 100644
 +endif
  DEB_DEPENDS += python3-virtualenv
  DEB_DEPENDS += libssl-dev
- DEB_DEPENDS += libelf-dev # for libbpf (af_xdp)
-@@ -155,6 +159,9 @@ endif
+ DEB_DEPENDS += libelf-dev libpcap-dev # for libxdp (af_xdp)
+@@ -173,6 +177,9 @@ endif
  # +ganglia-devel if building the ganglia plugin
  
  RPM_DEPENDS += chrpath libffi-devel rpm-build
@@ -58,5 +58,5 @@ index 5f597f4ea..9293298cb 100644
   This package contains the VPP dpdk plugin
   .
 -- 
-2.30.2
+2.45.2
 

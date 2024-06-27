@@ -1,34 +1,96 @@
-From 4ff9a364d8e42ff0f4e9641d5987e5a8af1c1eb9 Mon Sep 17 00:00:00 2001
+From 1678105a3936c47c5de6bb8989f596174c6f23e7 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Mon, 21 Sep 2020 19:13:15 +0300
 Subject: [PATCH] Bump scapy to v2.4.4
 
+also locks cryptography to 37.0.4 because of
+https://github.com/pyca/cryptography/pull/7234
 ---
- test/requirements-3.txt | 4 ++--
- test/requirements.txt   | 2 +-
- test/test_span.py       | 3 ++-
- 3 files changed, 5 insertions(+), 4 deletions(-)
+ test/requirements-3.txt | 51 ++++++++++++++++++++---------------------
+ test/requirements.txt   |  4 ++--
+ test/test_span.py       |  3 ++-
+ 3 files changed, 29 insertions(+), 29 deletions(-)
 
 diff --git a/test/requirements-3.txt b/test/requirements-3.txt
-index 64da933f4..887d71882 100644
+index 1a0524d69..3729bc140 100644
 --- a/test/requirements-3.txt
 +++ b/test/requirements-3.txt
-@@ -430,8 +430,8 @@ requests==2.27.1 \
-     --hash=sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61 \
-     --hash=sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d
-     # via sphinx
+@@ -202,30 +202,29 @@ commonmark==0.9.1 \
+     --hash=sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60 \
+     --hash=sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9
+     # via recommonmark
+-cryptography==41.0.5 \
+-    --hash=sha256:0c327cac00f082013c7c9fb6c46b7cc9fa3c288ca702c74773968173bda421bf \
+-    --hash=sha256:0d2a6a598847c46e3e321a7aef8af1436f11c27f1254933746304ff014664d84 \
+-    --hash=sha256:227ec057cd32a41c6651701abc0328135e472ed450f47c2766f23267b792a88e \
+-    --hash=sha256:22892cc830d8b2c89ea60148227631bb96a7da0c1b722f2aac8824b1b7c0b6b8 \
+-    --hash=sha256:392cb88b597247177172e02da6b7a63deeff1937fa6fec3bbf902ebd75d97ec7 \
+-    --hash=sha256:3be3ca726e1572517d2bef99a818378bbcf7d7799d5372a46c79c29eb8d166c1 \
+-    --hash=sha256:573eb7128cbca75f9157dcde974781209463ce56b5804983e11a1c462f0f4e88 \
+-    --hash=sha256:580afc7b7216deeb87a098ef0674d6ee34ab55993140838b14c9b83312b37b86 \
+-    --hash=sha256:5a70187954ba7292c7876734183e810b728b4f3965fbe571421cb2434d279179 \
+-    --hash=sha256:73801ac9736741f220e20435f84ecec75ed70eda90f781a148f1bad546963d81 \
+-    --hash=sha256:7d208c21e47940369accfc9e85f0de7693d9a5d843c2509b3846b2db170dfd20 \
+-    --hash=sha256:8254962e6ba1f4d2090c44daf50a547cd5f0bf446dc658a8e5f8156cae0d8548 \
+-    --hash=sha256:88417bff20162f635f24f849ab182b092697922088b477a7abd6664ddd82291d \
+-    --hash=sha256:a48e74dad1fb349f3dc1d449ed88e0017d792997a7ad2ec9587ed17405667e6d \
+-    --hash=sha256:b948e09fe5fb18517d99994184854ebd50b57248736fd4c720ad540560174ec5 \
+-    --hash=sha256:c707f7afd813478e2019ae32a7c49cd932dd60ab2d2a93e796f68236b7e1fbf1 \
+-    --hash=sha256:d38e6031e113b7421db1de0c1b1f7739564a88f1684c6b89234fbf6c11b75147 \
+-    --hash=sha256:d3977f0e276f6f5bf245c403156673db103283266601405376f075c849a0b936 \
+-    --hash=sha256:da6a0ff8f1016ccc7477e6339e1d50ce5f59b88905585f77193ebd5068f1e797 \
+-    --hash=sha256:e270c04f4d9b5671ebcc792b3ba5d4488bf7c42c3c241a3748e2599776f29696 \
+-    --hash=sha256:e886098619d3815e0ad5790c973afeee2c0e6e04b4da90b88e6bd06e2a0b1b72 \
+-    --hash=sha256:ec3b055ff8f1dce8e6ef28f626e0972981475173d7973d63f271b29c8a2897da \
+-    --hash=sha256:fba1e91467c65fe64a82c689dc6cf58151158993b13eb7a7f3f4b7f395636723
++cryptography==37.0.4 \
++    --hash=sha256:190f82f3e87033821828f60787cfa42bff98404483577b591429ed99bed39d59 \
++    --hash=sha256:2be53f9f5505673eeda5f2736bea736c40f051a739bfae2f92d18aed1eb54596 \
++    --hash=sha256:30788e070800fec9bbcf9faa71ea6d8068f5136f60029759fd8c3efec3c9dcb3 \
++    --hash=sha256:3d41b965b3380f10e4611dbae366f6dc3cefc7c9ac4e8842a806b9672ae9add5 \
++    --hash=sha256:4c590ec31550a724ef893c50f9a97a0c14e9c851c85621c5650d699a7b88f7ab \
++    --hash=sha256:549153378611c0cca1042f20fd9c5030d37a72f634c9326e225c9f666d472884 \
++    --hash=sha256:63f9c17c0e2474ccbebc9302ce2f07b55b3b3fcb211ded18a42d5764f5c10a82 \
++    --hash=sha256:6bc95ed67b6741b2607298f9ea4932ff157e570ef456ef7ff0ef4884a134cc4b \
++    --hash=sha256:7099a8d55cd49b737ffc99c17de504f2257e3787e02abe6d1a6d136574873441 \
++    --hash=sha256:75976c217f10d48a8b5a8de3d70c454c249e4b91851f6838a4e48b8f41eb71aa \
++    --hash=sha256:7bc997818309f56c0038a33b8da5c0bfbb3f1f067f315f9abd6fc07ad359398d \
++    --hash=sha256:80f49023dd13ba35f7c34072fa17f604d2f19bf0989f292cedf7ab5770b87a0b \
++    --hash=sha256:91ce48d35f4e3d3f1d83e29ef4a9267246e6a3be51864a5b7d2247d5086fa99a \
++    --hash=sha256:a958c52505c8adf0d3822703078580d2c0456dd1d27fabfb6f76fe63d2971cd6 \
++    --hash=sha256:b62439d7cd1222f3da897e9a9fe53bbf5c104fff4d60893ad1355d4c14a24157 \
++    --hash=sha256:b7f8dd0d4c1f21759695c05a5ec8536c12f31611541f8904083f3dc582604280 \
++    --hash=sha256:d204833f3c8a33bbe11eda63a54b1aad7aa7456ed769a982f21ec599ba5fa282 \
++    --hash=sha256:e007f052ed10cc316df59bc90fbb7ff7950d7e2919c9757fd42a2b8ecf8a5f67 \
++    --hash=sha256:f2dcb0b3b63afb6df7fd94ec6fbddac81b5492513f7b0436210d390c14d46ee8 \
++    --hash=sha256:f721d1885ecae9078c3f6bbe8a88bc0786b6e749bf32ccec1ef2b18929a05046 \
++    --hash=sha256:f7a6de3e98771e183645181b3627e2563dcde3ce94a9e42a3f427d2255190327 \
++    --hash=sha256:f8c0a6e9e1dd3eb0414ba320f85da6b0dcbd543126e30fcc546e7372a7fbf3b9
+     # via
+     #   -r requirements.txt
+     #   noiseprotocol
+@@ -636,8 +635,8 @@ rpds-py==0.10.6 \
+     # via
+     #   jsonschema
+     #   referencing
 -scapy==2.4.3 ; python_version >= "2.7" or python_version >= "3.4" \
 -    --hash=sha256:e2f8d11f6a941c14a789ae8b236b27bd634681f1b29b5e893861e284d234f6b0
 +scapy==2.4.4 ; python_version >= "2.7" or python_version >= "3.4" \
 +    --hash=sha256:ecfd7a14cd9c3ef0eb08d28d5bb71d97219edff1454ccbdff229f676b27900ee
      # via -r requirements.txt
- six==1.16.0 \
-     --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
+ sh==2.0.6 \
+     --hash=sha256:9b2998f313f201c777e2c0061f0b1367497097ef13388595be147e2a00bf7ba1 \
 diff --git a/test/requirements.txt b/test/requirements.txt
-index 509fe89bd..8cc2336db 100644
+index beb338dea..40cd08f6a 100644
 --- a/test/requirements.txt
 +++ b/test/requirements.txt
-@@ -6,7 +6,7 @@ ipaddress; python_version < '3.3'       # PSF
+@@ -1,12 +1,12 @@
+ pip-tools==7.3.0                        # BSD   Keep this in sync with Makefile's PIP_TOOLS_VERSION
+-cryptography!=2.0                       # BSD/Apache-2.0
++cryptography==37.0.4                       # BSD/Apache-2.0
+ deprecation>=2.0.6                      # Apache-2.0
+ faulthandler; python_version < '3.3' #  # BSD License (2 clause)
+ ipaddress; python_version < '3.3'       # PSF
  parameterized>=0.6.1                    # BSD
  pexpect                                 # ISC
  psutil                                  # BSD
@@ -38,21 +100,21 @@ index 509fe89bd..8cc2336db 100644
  syslog_rfc5424_parser>=0.3.1            # ISC
  objgraph                                # MIT
 diff --git a/test/test_span.py b/test/test_span.py
-index 3572d64e7..9b47d60dd 100644
+index 8eea1b066..e79ea1e38 100644
 --- a/test/test_span.py
 +++ b/test/test_span.py
 @@ -3,9 +3,10 @@
  import unittest
  
  from scapy.packet import Raw
--from scapy.layers.l2 import Ether, Dot1Q, GRE, ERSPAN
-+from scapy.layers.l2 import Ether, Dot1Q, GRE
+-from scapy.layers.l2 import Ether, GRE, ERSPAN
++from scapy.layers.l2 import Ether, GRE
  from scapy.layers.inet import IP, UDP
  from scapy.layers.vxlan import VXLAN
 +from scapy.contrib.erspan import ERSPAN
  
- from framework import VppTestCase, VppTestRunner
- from util import Host, ppp
+ from framework import VppTestCase
+ from asfframework import VppTestRunner
 -- 
-2.30.2
+2.45.2
 

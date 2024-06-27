@@ -1,4 +1,4 @@
-From 601b5fb89fc9325830d5a17ae6101762cb430862 Mon Sep 17 00:00:00 2001
+From ac294f16005b2b2d4f80ab3bef4f4ed17fc2916d Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Wed, 6 Jul 2022 05:03:28 +0400
 Subject: [PATCH] stats: handle interface renames properly
@@ -8,13 +8,13 @@ Signed-off-by: Ivan Shvedunov <ivan4th@gmail.com>
 Change-Id: I422ececeef19e7d247d8b8ea857aee553e6fbc4d
 ---
  src/vnet/interface.c       |  4 +++
- src/vnet/interface/stats.c | 53 ++++++++++++++++++++++++++++----------
+ src/vnet/interface/stats.c | 52 +++++++++++++++++++++++++++++---------
  src/vnet/interface/stats.h |  9 +++++++
- 3 files changed, 53 insertions(+), 13 deletions(-)
+ 3 files changed, 53 insertions(+), 12 deletions(-)
  create mode 100644 src/vnet/interface/stats.h
 
 diff --git a/src/vnet/interface.c b/src/vnet/interface.c
-index dd4399864..cce1ee559 100644
+index 706692ca0..db47d42c8 100644
 --- a/src/vnet/interface.c
 +++ b/src/vnet/interface.c
 @@ -44,6 +44,7 @@
@@ -25,7 +25,7 @@ index dd4399864..cce1ee559 100644
  
  /* *INDENT-OFF* */
  VLIB_REGISTER_LOG_CLASS (if_default_log, static) = {
-@@ -1575,6 +1576,9 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
+@@ -1580,6 +1581,9 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
    vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
    vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
  
@@ -36,7 +36,7 @@ index dd4399864..cce1ee559 100644
    vec_free (old_name);
  
 diff --git a/src/vnet/interface/stats.c b/src/vnet/interface/stats.c
-index f58ffa325..eb9f535fe 100644
+index 4f3213aaf..b0ac17a40 100644
 --- a/src/vnet/interface/stats.c
 +++ b/src/vnet/interface/stats.c
 @@ -8,6 +8,7 @@
@@ -73,13 +73,12 @@ index f58ffa325..eb9f535fe 100644
  static clib_error_t *
  statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
  {
-@@ -40,19 +60,7 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
+@@ -42,18 +62,7 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
  
    if (is_add)
      {
 -      vnet_sw_interface_t *si, *si_sup;
 -      vnet_hw_interface_t *hi_sup;
--      u8 *name;
 -
 -      si = vnet_get_sw_interface (vnm, sw_if_index);
 -      si_sup = vnet_get_sup_sw_interface (vnm, si->sw_if_index);
@@ -90,11 +89,11 @@ index f58ffa325..eb9f535fe 100644
 -      if (si->type != VNET_SW_INTERFACE_TYPE_HARDWARE)
 -	name = format (name, ".%d", si->sub.id);
 -
-+      u8 *name = statseg_sw_interface_name (vnm, sw_if_index);
++      name = statseg_sw_interface_name (vnm, sw_if_index);
        vlib_stats_set_string_vector (&if_names, sw_if_index, "%v", name);
  
        for (u32 index, i = 0; i < ARRAY_LEN (if_counters); i++)
-@@ -79,3 +87,22 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
+@@ -82,3 +91,22 @@ statseg_sw_interface_add_del (vnet_main_t *vnm, u32 sw_if_index, u32 is_add)
  }
  
  VNET_SW_INTERFACE_ADD_DEL_FUNCTION (statseg_sw_interface_add_del);
@@ -133,5 +132,5 @@ index 000000000..77dd1d3f3
 +
 +#endif
 -- 
-2.30.2
+2.45.2
 

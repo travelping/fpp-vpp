@@ -1,17 +1,17 @@
-From e87b9e6273dccec485b3f470ecb96245340ab99e Mon Sep 17 00:00:00 2001
+From 38bccc0ff93bba3e9f6516aee5ecd60664fc7d57 Mon Sep 17 00:00:00 2001
 From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
 Date: Tue, 28 Nov 2023 17:15:17 +0100
-Subject: [PATCH] [CENNSO-1475] nat: use tx vrf as rx vrf in controlled mode
+Subject: [PATCH] nat: use tx vrf as rx vrf in controlled mode
 
 ---
  src/plugins/nat/nat44-ed/nat44_ed_in2out.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 16072ba5d..29268ea16 100644
+index 15a276e3f..6229aed1e 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-@@ -541,7 +541,10 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -549,7 +549,10 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
    s = nat_ed_session_alloc (sm, thread_index, now, proto);
    ASSERT (s);
  
@@ -24,5 +24,5 @@ index 16072ba5d..29268ea16 100644
    if (!is_sm)
      {
 -- 
-2.42.1
+2.45.2
 

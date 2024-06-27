@@ -1,4 +1,4 @@
-From 6ac78099cf8157f4c2acbc82ce8fb74bcf8ea441 Mon Sep 17 00:00:00 2001
+From dce24fe1d4c32a35b2ccb19904a0ea986e6a2362 Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan4th@gmail.com>
 Date: Tue, 22 Sep 2020 01:28:37 +0300
 Subject: [PATCH] Add downstream marker
@@ -12,5 +12,5 @@ diff --git a/.downstream-marker b/.downstream-marker
 new file mode 100644
 index 000000000..e69de29bb
 -- 
-2.30.2
+2.45.2
 

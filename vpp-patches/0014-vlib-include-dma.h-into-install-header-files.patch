@@ -1,4 +1,4 @@
-From 8ef087923cfd3182cee0ee8d123220a7609721b8 Mon Sep 17 00:00:00 2001
+From 26ab87a5594bc9ec0d9f419fc2535e27971c75c4 Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Fri, 14 Oct 2022 14:56:52 +0400
 Subject: [PATCH] vlib: include dma.h into install header files
@@ -8,10 +8,10 @@ Subject: [PATCH] vlib: include dma.h into install header files
  1 file changed, 1 insertion(+)
 
 diff --git a/src/vlib/CMakeLists.txt b/src/vlib/CMakeLists.txt
-index 69bd18b6d..74069681d 100644
+index 9c4121672..e53f639c8 100644
 --- a/src/vlib/CMakeLists.txt
 +++ b/src/vlib/CMakeLists.txt
-@@ -149,6 +149,7 @@ add_vpp_library(vlib
+@@ -140,6 +140,7 @@ add_vpp_library(vlib
    unix/unix.h
    vlib.h
    vmbus/vmbus.h
@@ -20,5 +20,5 @@ index 69bd18b6d..74069681d 100644
    API_FILES
    pci/pci_types.api
 -- 
-2.30.2
+2.45.2
 

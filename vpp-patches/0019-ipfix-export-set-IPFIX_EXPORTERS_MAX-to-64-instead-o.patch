@@ -1,4 +1,4 @@
-From 84ffed6f2fa6bfc823c5a7bcfade1323e757ae7d Mon Sep 17 00:00:00 2001
+From 2fc37826f694042522562b3d50e67ce49c49dcfb Mon Sep 17 00:00:00 2001
 From: Ivan Shvedunov <ivan.shvedunov@travelping.com>
 Date: Thu, 20 Apr 2023 08:48:04 +0400
 Subject: [PATCH] ipfix-export: set IPFIX_EXPORTERS_MAX to 64 instead of 5
@@ -25,5 +25,5 @@ index cd0cafb61..35fabf7a9 100644
  /*
   * We support multiple exporters. Each one has its own configured
 -- 
-2.30.2
+2.45.2
 

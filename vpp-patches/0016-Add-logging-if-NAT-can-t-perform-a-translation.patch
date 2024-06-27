@@ -1,4 +1,4 @@
-From 331b5df63cfcfe82d090f574218c5675f1f9f322 Mon Sep 17 00:00:00 2001
+From 7a8f9d2dc4e15113ebf0a35e1bcd34ecf1a2ec6f Mon Sep 17 00:00:00 2001
 From: Sergey Matov <sergey.matov@travelping.com>
 Date: Mon, 19 Dec 2022 16:52:14 +0400
 Subject: [PATCH] Add logging if NAT can't perform a translation
@@ -9,7 +9,7 @@ Subject: [PATCH] Add logging if NAT can't perform a translation
  2 files changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index b6b2ab680..30ee1159d 100644
+index 210c85ce6..4a89cc770 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
 @@ -2351,7 +2351,7 @@ nat_init (vlib_main_t * vm)
@@ -22,7 +22,7 @@ index b6b2ab680..30ee1159d 100644
  
    nat_init_simple_counter (sm->total_sessions, "total-sessions",
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 118ac7bcf..16072ba5d 100644
+index 76eba1616..15a276e3f 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 @@ -149,6 +149,9 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
@@ -35,7 +35,7 @@ index 118ac7bcf..16072ba5d 100644
    return 1;
  }
  
-@@ -503,7 +506,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
+@@ -511,7 +514,7 @@ slow_path_ed (vlib_main_t *vm, snat_main_t *sm, vlib_buffer_t *b,
  	  b->error = node->errors[NAT_IN2OUT_ED_ERROR_MAX_SESSIONS_EXCEEDED];
  	  nat_ipfix_logging_max_sessions (thread_index,
  					  sm->max_translations_per_thread);
@@ -45,5 +45,5 @@ index 118ac7bcf..16072ba5d 100644
  	}
      }
 -- 
-2.30.2
+2.45.2
 

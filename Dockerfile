@@ -13,6 +13,8 @@ ENV GO_PACKAGE "golang-1.22-go"
 COPY vpp/Makefile /vpp-src/Makefile
 COPY vpp/build/external /vpp-src/build/external
 
+RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections
+
 # netbase is needed for Scapy
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \

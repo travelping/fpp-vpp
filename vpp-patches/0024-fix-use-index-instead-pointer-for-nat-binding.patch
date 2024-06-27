@@ -1,7 +1,7 @@
-From 79649a3bd12ad07b365bb4c1f3b073bcf2339919 Mon Sep 17 00:00:00 2001
+From 89cb24b5038cd9047ddf26e077559ca248bb33d1 Mon Sep 17 00:00:00 2001
 From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
 Date: Mon, 25 Mar 2024 12:43:17 +0100
-Subject: [PATCH] [CENNSO-1884] fix: use index instead pointer for nat binding
+Subject: [PATCH] fix: use index instead pointer for nat binding
 
 ---
  src/plugins/nat/nat44-ed/nat44_ed.c         | 9 ++++++++-
@@ -11,7 +11,7 @@ Subject: [PATCH] [CENNSO-1884] fix: use index instead pointer for nat binding
  4 files changed, 12 insertions(+), 3 deletions(-)
 
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.c b/src/plugins/nat/nat44-ed/nat44_ed.c
-index 30ee1159d..7e8d5f6dc 100644
+index 4a89cc770..7cc39ebef 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.c
 @@ -2529,6 +2529,7 @@ nat_ed_del_sessions_per_binding (snat_main_per_thread_data_t * tsm,
@@ -40,7 +40,7 @@ index 30ee1159d..7e8d5f6dc 100644
          && (this_bn->framed_addr.as_u32 == bn->framed_addr.as_u32)
          && (this_bn->start_port == bn->start_port)
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed.h b/src/plugins/nat/nat44-ed/nat44_ed.h
-index 13aa34230..014e67927 100644
+index ab054c941..4c252e049 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed.h
 +++ b/src/plugins/nat/nat44-ed/nat44_ed.h
 @@ -349,7 +349,7 @@ typedef CLIB_PACKED(struct
@@ -53,7 +53,7 @@ index 13aa34230..014e67927 100644
  }) snat_session_t;
  
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
-index 29268ea16..70eaf1bda 100644
+index 6229aed1e..494a1ee9c 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_in2out.c
 @@ -140,7 +140,7 @@ nat_controlled_alloc_addr_and_port (snat_main_t * sm,
@@ -66,7 +66,7 @@ index 29268ea16..70eaf1bda 100644
          }
        ++port;
 diff --git a/src/plugins/nat/nat44-ed/nat44_ed_inlines.h b/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
-index 7c7dce02f..cb853a454 100644
+index da9c47f97..5a8975e9d 100644
 --- a/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
 +++ b/src/plugins/nat/nat44-ed/nat44_ed_inlines.h
 @@ -440,6 +440,8 @@ nat_ed_session_alloc (snat_main_t *sm, u32 thread_index, f64 now, u8 proto)
@@ -79,5 +79,5 @@ index 7c7dce02f..cb853a454 100644
  }
  
 -- 
-2.44.0
+2.45.2
 
