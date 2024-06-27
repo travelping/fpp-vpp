@@ -13,14 +13,14 @@ to implement the required Mobile Core User Plane Function (UPF) features:
 ## Usage
 
 FPP VPP provides a [`Dockerfile`](./Dockerfile) that creates an Ubuntu image with the installed patched VPP version.
-FPP VPP is currently based on VPP version `stable/2202`.
+FPP VPP is currently based on VPP version `stable/2210`.
 
 Build images are stored in the [Travelping's quay](https://quay.io/repository/travelping/fpp-vpp?tab=tags) repository.
 
 ### Build versioning
 
-For the most stable FPP VPP version, use the release images tagged with the `v22.02.1_release` naming schema.
-Image tagging uses the following convention: `v<vpp-release>.<internal-build>`. For example, `v22.02.1` means that the VPP base version is `22.02`, and `.1` is the internal build number.
+For the most stable FPP VPP version, use the release images tagged with the `v22.10.1_release` naming schema.
+Image tagging uses the following convention: `v<vpp-release>.<internal-build>`. For example, `v22.10.1` means that the VPP base version is `22.10`, and `.1` is the internal build number.
 
 ### Run the built image
 
@@ -53,7 +53,7 @@ To add a patch to FPP VPP, follow these steps:
 
 1. Run the `hack/update-app.sh` script to download sources and downstream patches stored in the `vpp-patches` folder.
 1. Provide changes to the code in the `vpp` directory and commit the output to git.
-1. Create a patch using this command: 
+1. Create a patch using this command:
     ```
     git format-patch -N -1 HEAD
     ```
