@@ -1,0 +1,35 @@
+From 441af96373229cfae89d0e111b3f00292f1d6304 Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Mon, 8 Jul 2024 20:24:14 +0200
+Subject: [PATCH] fix: allow buffers to span whole pages
+
+for non-hugepage use case
+---
+ src/vlib/buffer.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/vlib/buffer.c b/src/vlib/buffer.c
+index b5200ba50..9eadfdc75 100644
+--- a/src/vlib/buffer.c
++++ b/src/vlib/buffer.c
+@@ -475,7 +475,7 @@ vlib_buffer_alloc_size (uword ext_hdr_size, uword data_size)
+ 
+   /* in case when we have even number of 'cachelines', we add one more for
+    * better cache occupancy */
+-  alloc_size |= VLIB_BUFFER_ALIGN;
++  // alloc_size |= VLIB_BUFFER_ALIGN;
+ 
+   return alloc_size;
+ }
+@@ -570,7 +570,7 @@ vlib_buffer_pool_create (vlib_main_t *vm, u32 data_size, u32 physmem_map_index,
+       u32 bi;
+ 
+       /* skip if buffer spans across page boundary */
+-      if (((uword) p & page_mask) != ((uword) (p + alloc_size) & page_mask))
++      if ((((uword) p & page_mask) != ((uword) (p + alloc_size) & page_mask)) && (alloc_size != (1 << m->log2_page_size)))
+ 	continue;
+ 
+       b = (vlib_buffer_t *) (p + bm->ext_hdr_size);
+-- 
+2.45.2
+
