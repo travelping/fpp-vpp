@@ -1,0 +1,45 @@
+From 76dc1c7e320ad74f4b13a0014d5644d83817e81d Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Mon, 15 Jul 2024 22:08:26 +0200
+Subject: [PATCH] fix: align buffers to page boundary
+
+Upstream just avoids allocating buffers crossing
+page boundary what makes an issue for 4k hugepages
+by using small amount of buffers memory, because
+most of it happens on crosspage boundary.
+
+For fix instead of just dropping crosspage buffer,
+we align it to next page making use of more space.
+---
+ src/vlib/buffer.c | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/vlib/buffer.c b/src/vlib/buffer.c
+index b5200ba50..391454c6d 100644
+--- a/src/vlib/buffer.c
++++ b/src/vlib/buffer.c
+@@ -475,7 +475,7 @@ vlib_buffer_alloc_size (uword ext_hdr_size, uword data_size)
+ 
+   /* in case when we have even number of 'cachelines', we add one more for
+    * better cache occupancy */
+-  alloc_size |= VLIB_BUFFER_ALIGN;
++  // alloc_size |= VLIB_BUFFER_ALIGN;
+ 
+   return alloc_size;
+ }
+@@ -571,7 +571,11 @@ vlib_buffer_pool_create (vlib_main_t *vm, u32 data_size, u32 physmem_map_index,
+ 
+       /* skip if buffer spans across page boundary */
+       if (((uword) p & page_mask) != ((uword) (p + alloc_size) & page_mask))
+-	continue;
++        {
++          /* round to next page instead of just skipping buffer */
++          p = (u8*) (round_pow2((uword) p, 1 << m->log2_page_size)) - alloc_size;
++          continue;
++        }
+ 
+       b = (vlib_buffer_t *) (p + bm->ext_hdr_size);
+       b->template = bp->buffer_template;
+-- 
+2.45.2
+
