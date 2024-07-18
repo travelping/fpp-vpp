@@ -18,19 +18,16 @@ function do_build {
   # TODO: build branch images and export cache to the corresponding branch image
   # --export-cache type=inline \
   # --import-cache type=registry,ref="${IMAGE_BASE_NAME}" \
-  opts=(--frontend dockerfile.v0
-        --progress=plain
-        --local context=.
-        --local dockerfile=.
-        --opt filename="${DOCKERFILE}"
-        --opt build-arg:BUILD_TYPE=${BUILD_TYPE}
-        --opt label:vpp.release="${VPP_RELEASE}"
-        --opt label:vpp.commit="${VPP_COMMIT}")
+  opts=(--progress=plain
+        --file "${DOCKERFILE}"
+        --build-arg BUILD_TYPE=${BUILD_TYPE}
+        --label "vpp.release=${VPP_RELEASE}"
+        --label "vpp.commit=${VPP_COMMIT}")
   if [[ ${IMAGE_EXPIRES_AFTER} ]]; then
-    opts+=(--opt label:quay.expires-after="${IMAGE_EXPIRES_AFTER}")
+    opts+=(--label "quay.expires-after=${IMAGE_EXPIRES_AFTER}")
   fi
   set -x
-  buildctl build "${opts[@]}" "$@"
+  docker buildx build "${opts[@]}" . "$@"
   set +x
 }
 
@@ -42,18 +39,18 @@ FINAL_IMAGE_NAME="${IMAGE_BASE_NAME}:${IMAGE_BASE_TAG}_${BUILD_TYPE}"
 echo >&2 "Building VPP and extracting the artifacts ..."
 rm -rf /tmp/_out
 mkdir /tmp/_out
-do_build --opt target=artifacts --output type=local,dest=/tmp/_out
+do_build --target=artifacts --output type=local,dest=/tmp/_out
 
 echo >&2 "Building the dev image from ${DOCKERFILE} ..."
 push=",push=true"
 if [[ ${NO_PUSH} ]]; then
   push=""
 fi
-do_build --opt target=dev-stage \
+do_build --target=dev-stage \
          --output type="image,\"name=${DEV_IMAGE_NAME}\"${push}"
 
 echo >&2 "Building the final image from ${DOCKERFILE} ..."
-do_build --opt target=final-stage \
+do_build --target=final-stage \
          --output type="image,\"name=${FINAL_IMAGE_NAME}\"${push}"
 
 echo "${DEV_IMAGE_NAME}" > "image-dev-${BUILD_TYPE}.txt"
