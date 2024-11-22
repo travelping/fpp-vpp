@@ -56,6 +56,10 @@ RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
 RUN go install golang.org/x/tools/gopls@v0.11.0 && \
     mv /go/bin/gopls /usr/local/bin
 
+RUN --mount=target=/var/cache/apt,type=cache,sharing=private \
+    apt-get install ccache && \
+    apt-get clean
+
 FROM build-base-stage AS build-stage
 
 ADD vpp /vpp-src
@@ -63,7 +67,9 @@ ADD vpp /vpp-src
 # starting from this point, the debug and release buffers differ
 ARG BUILD_TYPE
 
+ENV PATH="/usr/lib/ccache:$PATH"
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
+    --mount=type=cache,target=/ccache/ \
     case ${BUILD_TYPE} in \
     debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
     release) target="pkg-deb"; args="";; \
@@ -71,6 +77,7 @@ RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
     esac; \
     echo "TARGET: ${target}" && \
     make -C /vpp-src "${target}" V=1 VPP_EXTRA_CMAKE_ARGS="${args}" && \
+    ccache -s && \
     mkdir -p /out/debs && \
     mv /vpp-src/build-root/*.deb /out/debs
 
