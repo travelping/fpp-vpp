@@ -67,11 +67,9 @@ jobs:
         build-args: |
           BUILD_TYPE=${{ matrix.build_type }}
         cache-from: |
-          type=gha
-          type=gha,scope=ccache
+          type=gha,scope=buildx-base-${{ matrix.build_type }}
         cache-to: |
-          type=gha,mode=max
-          type=gha,mode=max,scope=ccache
+          type=gha,mode=max,scope=buildx-base-${{ matrix.build_type }}
 
     - name: Build dev image
       uses: docker/build-push-action@v6
@@ -87,11 +85,9 @@ jobs:
           vpp.commit=${{ steps.tags.outputs.vpp_commit }}
           quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
         cache-from: |
-          type=gha
-          type=gha,scope=ccache
+          type=gha,scope=buildx-dev-${{ matrix.build_type }}
         cache-to: |
-          type=gha,mode=max
-          type=gha,mode=max,scope=ccache
+          type=gha,mode=max,scope=buildx-dev-${{ matrix.build_type }}
 
     - name: Build final image
       uses: docker/build-push-action@v6
@@ -107,8 +103,9 @@ jobs:
           vpp.commit=${{ steps.tags.outputs.vpp_commit }}
           quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
         cache-from: |
-          type=gha
-          type=gha,scope=ccache
+          type=gha,scope=buildx-final-${{ matrix.build_type }}
+        cache-to: |
+          type=gha,mode=max,scope=buildx-final-${{ matrix.build_type }}
 
     - name: Save image names
       run: |

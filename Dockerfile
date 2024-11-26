@@ -64,10 +64,6 @@ RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
 RUN go install golang.org/x/tools/gopls@v0.11.0 && \
     mv /go/bin/gopls /usr/local/bin
 
-RUN --mount=target=/var/cache/apt,type=cache,sharing=private \
-    apt-get install ccache && \
-    apt-get clean
-
 FROM build-base-stage AS build-stage
 
 ADD vpp /vpp-src
