@@ -20,7 +20,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \
     apt-get update && \
     apt-get dist-upgrade -yy && \
-    apt-get install -y software-properties-common && \
+    apt-get install -y software-properties-common ccache && \
     add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -48,6 +48,14 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     ln -s /usr/lib/go-1.22/bin/go /usr/bin/go && \
     ln -s /usr/lib/go-1.22/bin/gofmt /usr/bin/gofmt
 
+
+# Add ccache configuration
+ENV PATH="/usr/lib/ccache:$PATH"
+ENV CCACHE_DIR=/ccache
+ENV CCACHE_MAXSIZE=400M
+ENV CCACHE_COMPRESS=true
+ENV CCACHE_COMPRESSLEVEL=6
+
 ENV GOPATH /go
 
 RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
@@ -67,9 +75,8 @@ ADD vpp /vpp-src
 # starting from this point, the debug and release buffers differ
 ARG BUILD_TYPE
 
-ENV PATH="/usr/lib/ccache:$PATH"
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
-    --mount=type=cache,target=/ccache/ \
+    --mount=type=cache,target=/ccache,id=ccache \
     case ${BUILD_TYPE} in \
     debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
     release) target="pkg-deb"; args="";; \
