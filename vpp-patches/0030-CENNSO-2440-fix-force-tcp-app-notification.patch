@@ -1,0 +1,105 @@
+From c506e3431ebf1ec56ded08204e4d8c73aefc827b Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Tue, 26 Nov 2024 14:40:55 +0100
+Subject: [PATCH] [CENNSO-2440] fix: force tcp app notification
+
+Add TCP_CONN_APP_DONT_NOTIF flag to fix
+optimizationcase when FIN was received in SYN_RCVD
+state and caused unexpected notification during
+scheduled removal when trying to avoid
+notifications for session which was not notified
+to application.
+
+Add TCP_CONN_FORCE_NOTIFY flag to disable such
+optimization and always notify session. This is
+needed for UPG, since it "owns" state of session
+and should be always notified about changes.
+---
+ src/vnet/tcp/tcp.c       | 12 +++++++++++-
+ src/vnet/tcp/tcp_input.c | 16 ++++++++++++++--
+ src/vnet/tcp/tcp_types.h |  4 ++++
+ 3 files changed, 29 insertions(+), 3 deletions(-)
+
+diff --git a/src/vnet/tcp/tcp.c b/src/vnet/tcp/tcp.c
+index c7121b43e..e7c98ed48 100644
+--- a/src/vnet/tcp/tcp.c
++++ b/src/vnet/tcp/tcp.c
+@@ -1214,7 +1214,13 @@ tcp_timer_waitclose_handler (tcp_connection_t * tc)
+       tcp_worker_stats_inc (wrk, to_finwait2, 1);
+       break;
+     case TCP_STATE_TIME_WAIT:
++      tcp_connection_timers_reset (tc);
+       tcp_connection_set_state (tc, TCP_STATE_CLOSED);
++
++      // do not notify session if it was not communicated to app
++      if (!(tc->flags & TCP_CONN_APP_DONT_NOTIF))
++        session_transport_closed_notify (&tc->connection);
++
+       tcp_program_cleanup (wrk, tc);
+       break;
+     default:
+@@ -1292,7 +1298,11 @@ tcp_handle_cleanups (tcp_worker_ctx_t * wrk, clib_time_type_t now)
+       tc = tcp_connection_get (req->connection_index, thread_index);
+       if (PREDICT_FALSE (!tc))
+ 	continue;
+-      session_transport_delete_notify (&tc->connection);
++
++      // do not notify session if it was not communicated to app
++      if (!(tc->flags & TCP_CONN_APP_DONT_NOTIF))
++	session_transport_delete_notify (&tc->connection);
++
+       tcp_connection_cleanup (tc);
+     }
+ }
+diff --git a/src/vnet/tcp/tcp_input.c b/src/vnet/tcp/tcp_input.c
+index 82f1c2ece..ea155216a 100644
+--- a/src/vnet/tcp/tcp_input.c
++++ b/src/vnet/tcp/tcp_input.c
+@@ -2127,7 +2127,9 @@ tcp46_rcv_process_inline (vlib_main_t *vm, vlib_node_runtime_t *node,
+ 
+ 	  /* Avoid notifying app if connection is about to be closed */
+ 	  if (PREDICT_FALSE (is_fin))
+-	    break;
++	    // unless we forced to notify
++	    if (!(tc->flags & TCP_CONN_FORCE_NOTIFY))
++	      break;
+ 
+ 	  /* Update rtt and rto */
+ 	  tcp_estimate_initial_rtt (tc);
+@@ -2357,7 +2359,17 @@ tcp46_rcv_process_inline (vlib_main_t *vm, vlib_node_runtime_t *node,
+ 	  tc->rcv_nxt += 1;
+ 	  tcp_send_fin (tc);
+ 	  tcp_connection_set_state (tc, TCP_STATE_TIME_WAIT);
+-	  tcp_program_cleanup (wrk, tc);
++
++	  // do not notify app, unless it's forced by flag
++	  if (!(tc->flags & TCP_CONN_FORCE_NOTIFY))
++	    tc->flags |= TCP_CONN_APP_DONT_NOTIF;
++	  else
++	    session_transport_closing_notify (&tc->connection);
++
++	  // tcp_program_cleanup (wrk, tc);
++	  // start TIME_WAIT removal timer
++	  tcp_timer_set (&wrk->timer_wheel, tc, TCP_TIMER_WAITCLOSE,
++			 tcp_cfg.timewait_time);
+ 	  break;
+ 	case TCP_STATE_CLOSE_WAIT:
+ 	case TCP_STATE_CLOSING:
+diff --git a/src/vnet/tcp/tcp_types.h b/src/vnet/tcp/tcp_types.h
+index aacfd8f2f..62ba5c75b 100644
+--- a/src/vnet/tcp/tcp_types.h
++++ b/src/vnet/tcp/tcp_types.h
+@@ -129,6 +129,10 @@ typedef enum tcp_cfg_flag_
+   _(PSH_PENDING, "PSH pending")			\
+   _(FINRCVD, "FIN received")			\
+   _(ZERO_RWND_SENT, "Zero RWND sent")		\
++  /* handle removal before "established" state and notify */ \
++  _(APP_DONT_NOTIF, "No need to notify application") \
++  /* hack for UPG, because we control state of transport and need to always notify */ \
++  _(FORCE_NOTIFY, "Force notification of app") \
+ 
+ typedef enum tcp_connection_flag_bits_
+ {
+-- 
+2.47.0
+
