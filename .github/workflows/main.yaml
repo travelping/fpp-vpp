@@ -17,9 +17,6 @@ jobs:
     strategy:
       matrix:
         build_type: [debug, release]
-    env:
-      QUAY_USER_ID: ${{ secrets.QUAY_USER_ID }}
-      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -63,13 +60,10 @@ jobs:
         context: .
         push: false
         target: artifacts
-        outputs: type=local,dest=/tmp/_out
+        outputs: |
+          type=local,dest=/tmp/_out
         build-args: |
           BUILD_TYPE=${{ matrix.build_type }}
-        cache-from: |
-          type=gha,scope=buildx-base-${{ matrix.build_type }}
-        cache-to: |
-          type=gha,mode=max,scope=buildx-base-${{ matrix.build_type }}
 
     - name: Build dev image
       uses: docker/build-push-action@v6
@@ -84,10 +78,6 @@ jobs:
           vpp.release=${{ steps.tags.outputs.vpp_release }}
           vpp.commit=${{ steps.tags.outputs.vpp_commit }}
           quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
-        cache-from: |
-          type=gha,scope=buildx-dev-${{ matrix.build_type }}
-        cache-to: |
-          type=gha,mode=max,scope=buildx-dev-${{ matrix.build_type }}
 
     - name: Build final image
       uses: docker/build-push-action@v6
@@ -102,10 +92,6 @@ jobs:
           vpp.release=${{ steps.tags.outputs.vpp_release }}
           vpp.commit=${{ steps.tags.outputs.vpp_commit }}
           quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
-        cache-from: |
-          type=gha,scope=buildx-final-${{ matrix.build_type }}
-        cache-to: |
-          type=gha,mode=max,scope=buildx-final-${{ matrix.build_type }}
 
     - name: Save image names
       run: |

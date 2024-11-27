@@ -48,8 +48,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     ln -s /usr/lib/go-1.22/bin/go /usr/bin/go && \
     ln -s /usr/lib/go-1.22/bin/gofmt /usr/bin/gofmt
 
-
-# Add ccache configuration
 ENV PATH="/usr/lib/ccache:$PATH"
 ENV CCACHE_DIR=/ccache
 ENV CCACHE_MAXSIZE=400M
@@ -72,7 +70,7 @@ ADD vpp /vpp-src
 ARG BUILD_TYPE
 
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
-    --mount=type=cache,target=/ccache,id=ccache \
+    --mount=type=cache,target=/ccache \
     case ${BUILD_TYPE} in \
     debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
     release) target="pkg-deb"; args="";; \
