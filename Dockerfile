@@ -70,7 +70,7 @@ ADD vpp /vpp-src
 ARG BUILD_TYPE
 
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
-    --mount=type=cache,target=/ccache \
+    --mount=target=/ccache,type=cache \
     case ${BUILD_TYPE} in \
     debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
     release) target="pkg-deb"; args="";; \

@@ -7,8 +7,9 @@ on:
 
 env:
   REGISTRY: "quay.io"
-  IMAGE_BASE_NAME: "quay.io/travelping/fpp-vpp"
-  IMAGE_EXPIRES_AFTER: 7d
+  IMAGE_NAME: travelping/fpp-vpp
+  # this points to buildkitd k8s service
+  BUILDKITD_ADDR: tcp://buildkitd:1234
 
 jobs:
   build:
@@ -17,91 +18,32 @@ jobs:
     strategy:
       matrix:
         build_type: [debug, release]
+    env:
+      QUAY_USER_ID: ${{ secrets.QUAY_USER_ID }}
+      QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        version: latest
-        driver-opts: |
-          image=moby/buildkit:latest
-
+      uses: actions/checkout@v2
     - name: Prepare repo
       run: |
         git config --global user.email "dummy@example.com"
         git config --global user.name "dummy user"
         hack/update-vpp.sh
-
-    - name: Get image tags
-      id: tags
-      run: |
-        . vpp.spec
-        VPP_VERSION=$(vpp/build-root/scripts/version | sed 's/~.*//')
-        GIT_SHA=$(git rev-parse HEAD | cut -c1-9)
-        BASE_TAG="${VPP_VERSION}-${GIT_SHA}"
-        echo "base_tag=${BASE_TAG}" >> $GITHUB_OUTPUT
-        echo "dev_tag=${BASE_TAG}_dev_${{ matrix.build_type }}" >> $GITHUB_OUTPUT
-        echo "final_tag=${BASE_TAG}_${{ matrix.build_type }}" >> $GITHUB_OUTPUT
-        echo "vpp_release=${VPP_RELEASE}" >> $GITHUB_OUTPUT
-        echo "vpp_commit=${VPP_COMMIT}" >> $GITHUB_OUTPUT
-
     - name: Login to quay.io
-      uses: docker/login-action@v3
+      uses: docker/login-action@v1
       with:
         registry: ${{ env.REGISTRY }}
         username: ${{ secrets.QUAY_USER_ID }}
         password: ${{ secrets.QUAY_TOKEN }}
-
-    - name: Build base artifacts
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: false
-        target: artifacts
-        outputs: |
-          type=local,dest=/tmp/_out
-        build-args: |
-          BUILD_TYPE=${{ matrix.build_type }}
-
-    - name: Build dev image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: true
-        target: dev-stage
-        tags: ${{ env.IMAGE_BASE_NAME }}:${{ steps.tags.outputs.dev_tag }}
-        build-args: |
-          BUILD_TYPE=${{ matrix.build_type }}
-        labels: |
-          vpp.release=${{ steps.tags.outputs.vpp_release }}
-          vpp.commit=${{ steps.tags.outputs.vpp_commit }}
-          quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
-
-    - name: Build final image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: true
-        target: final-stage
-        tags: ${{ env.IMAGE_BASE_NAME }}:${{ steps.tags.outputs.final_tag }}
-        build-args: |
-          BUILD_TYPE=${{ matrix.build_type }}
-        labels: |
-          vpp.release=${{ steps.tags.outputs.vpp_release }}
-          vpp.commit=${{ steps.tags.outputs.vpp_commit }}
-          quay.expires-after=${{ env.IMAGE_EXPIRES_AFTER }}
-
-    - name: Save image names
+    - name: Build fpp-vpp image
       run: |
-        echo "${{ env.IMAGE_BASE_NAME }}:${{ steps.tags.outputs.dev_tag }}" > "image-dev-${{ matrix.build_type }}.txt"
-        echo "${{ env.IMAGE_BASE_NAME }}:${{ steps.tags.outputs.final_tag }}" > "image-${{ matrix.build_type }}.txt"
+        BUILD_TYPE="${{ matrix.build_type }}" hack/ci-build.sh
+        mv /tmp/_out _out
     - name: Upload debs
       uses: actions/upload-artifact@v4
       with:
         name: debs-${{ matrix.build_type }}
-        path: /tmp/_out/*
+        path: _out/*
     - name: Upload image.txt
       uses: actions/upload-artifact@v4
       with:
