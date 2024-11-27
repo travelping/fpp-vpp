@@ -40,17 +40,17 @@ jobs:
         BUILD_TYPE="${{ matrix.build_type }}" hack/ci-build.sh
         mv /tmp/_out _out
     - name: Upload debs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: debs-${{ matrix.build_type }}
         path: _out/*
     - name: Upload image.txt
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: image-${{ matrix.build_type }}
         path: image-${{ matrix.build_type }}.txt
     - name: Upload image.txt for the dev image
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: image-dev-${{ matrix.build_type }}
         path: image-dev-${{ matrix.build_type }}.txt
