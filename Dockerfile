@@ -20,7 +20,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \
     apt-get update && \
     apt-get dist-upgrade -yy && \
-    apt-get install -y software-properties-common && \
+    apt-get install -y software-properties-common ccache && \
     add-apt-repository ppa:longsleep/golang-backports && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -48,6 +48,12 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     ln -s /usr/lib/go-1.22/bin/go /usr/bin/go && \
     ln -s /usr/lib/go-1.22/bin/gofmt /usr/bin/gofmt
 
+ENV PATH="/usr/lib/ccache:$PATH"
+ENV CCACHE_DIR=/ccache
+ENV CCACHE_MAXSIZE=400M
+ENV CCACHE_COMPRESS=true
+ENV CCACHE_COMPRESSLEVEL=6
+
 ENV GOPATH /go
 
 RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
@@ -64,6 +70,7 @@ ADD vpp /vpp-src
 ARG BUILD_TYPE
 
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
+    --mount=target=/ccache,type=cache \
     case ${BUILD_TYPE} in \
     debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
     release) target="pkg-deb"; args="";; \
@@ -71,6 +78,7 @@ RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
     esac; \
     echo "TARGET: ${target}" && \
     make -C /vpp-src "${target}" V=1 VPP_EXTRA_CMAKE_ARGS="${args}" && \
+    ccache -s && \
     mkdir -p /out/debs && \
     mv /vpp-src/build-root/*.deb /out/debs
 

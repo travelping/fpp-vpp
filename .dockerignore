@@ -1,0 +1,7 @@
+.github
+.gitlab-ci.yml
+Dockerfile
+.vscode
+.idea
+README.md
+CODEOWNERS
