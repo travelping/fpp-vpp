@@ -26,7 +26,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential sudo git netbase curl ca-certificates \
     ${GO_PACKAGE} iproute2 gdb tcpdump iputils-ping libpcap-dev \
-    dumb-init gdbserver clang-11 && \
+    dumb-init gdbserver clang-11 libasan6 && \
     curl -sSL "https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz" | \
     tar -xvz -C /usr/local bin/buildctl && \
     echo "${BUILDCTL_SHA256}  /usr/local/bin/buildctl" | sha256sum -c && \
@@ -72,7 +72,7 @@ ARG BUILD_TYPE
 RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
     --mount=target=/ccache,type=cache \
     case ${BUILD_TYPE} in \
-    debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1";; \
+    debug) target="pkg-deb-debug"; args="-DVPP_ENABLE_TRAJECTORY_TRACE=1 -DVPP_ENABLE_SANITIZE_ADDR=ON";; \
     release) target="pkg-deb"; args="";; \
     *) echo >&2 "Bad BUILD_TYPE: ${BUILD_TYPE}";; \
     esac; \
@@ -124,7 +124,7 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     apt-get update && apt-get dist-upgrade -yy && \
     apt-get install --no-install-recommends -yy liblz4-tool tar gdb gdbserver strace \
     libhyperscan5 libmbedcrypto3 libmbedtls12 libmbedx509-0 apt-utils \
-    libpython3-stdlib \
+    libpython3-stdlib libasan6 \
     python3 python3-minimal python3.6 python3-minimal \
     python3-cffi python3-cffi-backend libnuma1 \
     libnl-3-200 libnl-route-3-200 libpcap0.8
