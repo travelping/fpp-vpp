@@ -36,14 +36,18 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     update-alternatives --set cc /usr/bin/clang &&\
     apt-get clean
 
-ENV PATH="/usr/lib/ccache:$PATH" \
-    CCACHE_DIR=/ccache \
-    CCACHE_MAXSIZE=400M \
+# configure ccache, but do not provide it in path
+# each RUN should provide it separately
+ENV CCACHE_DIR=/ccache \
+    CCACHE_MAXSIZE=600M \
     CCACHE_COMPRESS=true \
     CCACHE_COMPRESSLEVEL=6 \
     GOPATH=/go
 
-RUN go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
+# golang uses ccache as well
+RUN --mount=target=/ccache,type=cache \
+    PATH="/usr/lib/ccache:$PATH" && \
+    go install github.com/onsi/ginkgo/ginkgo@v1.16.5 && \
     mv /go/bin/ginkgo /usr/local/bin && \
     go install golang.org/x/tools/gopls@v0.11.0 && \
     mv /go/bin/gopls /usr/local/bin
@@ -54,6 +58,7 @@ COPY vpp/build/external /vpp-src/build/external
 RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     --mount=target=/var/cache/apt,type=cache,sharing=private \
     --mount=target=/ccache,type=cache \
+    PATH="/usr/lib/ccache:$PATH" && \
     cd /vpp-src && \
     git config --global user.email "dummy@example.com" && \
     git config --global user.name "dummy user" && \
@@ -73,8 +78,8 @@ ADD vpp /vpp-src
 # starting from this point, the debug and release buffers differ
 ARG BUILD_TYPE
 
-RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
-    --mount=target=/ccache,type=cache \
+RUN --mount=target=/ccache,type=cache \
+    PATH="/usr/lib/ccache:$PATH" && \
     case ${BUILD_TYPE} in \
         debug) \
             target="pkg-deb-debug"; \
