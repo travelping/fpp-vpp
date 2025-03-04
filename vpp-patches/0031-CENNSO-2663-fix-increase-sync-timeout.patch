@@ -1,0 +1,25 @@
+From fe2d8765b72c8ca82b8153db2951c83bee08da4f Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Mon, 3 Mar 2025 20:59:32 +0100
+Subject: [PATCH] [CENNSO-2663] fix: increase sync timeout
+
+---
+ src/vlib/threads.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vlib/threads.h b/src/vlib/threads.h
+index 636212c93..4c9fe83d1 100644
+--- a/src/vlib/threads.h
++++ b/src/vlib/threads.h
+@@ -159,7 +159,7 @@ u32 vlib_frame_queue_main_init (u32 node_index, u32 frame_queue_nelts);
+ /* long barrier timeout, for gdb... */
+ #define BARRIER_SYNC_TIMEOUT (600.1)
+ #else
+-#define BARRIER_SYNC_TIMEOUT (1.0)
++#define BARRIER_SYNC_TIMEOUT (5.0)
+ #endif
+ 
+ #define vlib_worker_thread_barrier_sync(X) {vlib_worker_thread_barrier_sync_int(X, __FUNCTION__);}
+-- 
+2.48.1
+
