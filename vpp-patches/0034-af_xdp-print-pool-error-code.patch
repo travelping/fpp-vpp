@@ -1,0 +1,25 @@
+From f8a58cdd6b5af48d04f2d9d7313fe9ebbc4bd82c Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Fri, 27 Jun 2025 20:06:09 +0200
+Subject: [PATCH 34/34] af_xdp: print pool error code
+
+---
+ src/plugins/af_xdp/input.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/plugins/af_xdp/input.c b/src/plugins/af_xdp/input.c
+index 0d8904196..e0b202b44 100644
+--- a/src/plugins/af_xdp/input.c
++++ b/src/plugins/af_xdp/input.c
+@@ -96,7 +96,7 @@ af_xdp_device_input_refill_db (vlib_main_t * vm,
+ 	  if (node)
+ 	    vlib_error_count (vm, node->node_index,
+ 			      AF_XDP_INPUT_ERROR_SYSCALL_FAILURES, 1);
+-	  af_xdp_device_error (ad, "rx poll() failed");
++	  af_xdp_device_error (ad, "rx poll() failed: %s (errno %d)", strerror(ret), ret);
+ 	}
+     }
+ }
+-- 
+2.49.0
+
