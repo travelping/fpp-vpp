@@ -1,4 +1,4 @@
-From d383b50ea710a070faf0d893985dd942027b39b0 Mon Sep 17 00:00:00 2001
+From 19cf5078ed7d013e2d06e6d13ea98cf5cb71b33e Mon Sep 17 00:00:00 2001
 From: Vladimir Zhigulin <scripath96@gmail.com>
 Date: Wed, 27 Dec 2023 15:23:18 +0100
 Subject: [PATCH] vppinfra: collect heap stats in constant time
@@ -18,10 +18,10 @@ Signed-off-by: Vladimir Zhigulin <scripath96@gmail.com>
 Change-Id: Iaa7a5dda19ce9fd0a32d55f4dd16bc62d4b0b480
 ---
  src/vlib/stats/provider_mem.c |  8 +----
- src/vppinfra/dlmalloc.c       | 66 ++++++++++++++++++++++++++++++++---
+ src/vppinfra/dlmalloc.c       | 67 ++++++++++++++++++++++++++++++++---
  src/vppinfra/dlmalloc.h       |  5 ++-
  src/vppinfra/mem_dlmalloc.c   | 13 ++-----
- 4 files changed, 69 insertions(+), 23 deletions(-)
+ 4 files changed, 70 insertions(+), 23 deletions(-)
 
 diff --git a/src/vlib/stats/provider_mem.c b/src/vlib/stats/provider_mem.c
 index f3a3f5d3e..bc3801f2c 100644
@@ -59,7 +59,7 @@ index f3a3f5d3e..bc3801f2c 100644
    /* Create symlink */
    vlib_stats_add_symlink (idx, STAT_MEM_USED, "/mem/%s/used", heap->name);
 diff --git a/src/vppinfra/dlmalloc.c b/src/vppinfra/dlmalloc.c
-index 5cdc6f6cc..1fcd02741 100644
+index 5cdc6f6cc..4d8b92d20 100644
 --- a/src/vppinfra/dlmalloc.c
 +++ b/src/vppinfra/dlmalloc.c
 @@ -1179,6 +1179,9 @@ struct malloc_state {
@@ -183,7 +183,7 @@ index 5cdc6f6cc..1fcd02741 100644
          }
        }
      }
-@@ -4663,8 +4707,11 @@ void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
+@@ -4663,8 +4707,12 @@ void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
      USAGE_ERROR_ACTION(ms,ms);
      return 0;
    }
@@ -191,13 +191,14 @@ index 5cdc6f6cc..1fcd02741 100644
 -    return mspace_malloc(msp, bytes);
 +  if (alignment <= MALLOC_ALIGNMENT) {
 +    void *rv = mspace_malloc(msp, bytes);
-+    ms->fast_stats_used_sz += chunksize(mem2chunk(rv));
++    if (rv)
++      ms->fast_stats_used_sz += chunksize(mem2chunk(rv));
 +    return rv;
 +  }
    return internal_memalign(ms, alignment, bytes);
  }
  
-@@ -4797,12 +4844,21 @@ size_t mspace_set_footprint_limit(mspace msp, size_t bytes) {
+@@ -4797,12 +4845,21 @@ size_t mspace_set_footprint_limit(mspace msp, size_t bytes) {
  
  #if !NO_MALLINFO
  __clib_nosanitize_addr
@@ -282,5 +283,5 @@ index de7591139..696738e86 100644
  }
  
 -- 
-2.45.2
+2.49.0
 
