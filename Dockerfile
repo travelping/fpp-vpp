@@ -20,17 +20,16 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
         # use ccache for clang object files caching
         ccache libpcap-dev dumb-init gdbserver \
         # golang installed from ppa
-        golang-1.23-go \
+        golang-1.24-go \
         # clang also installed in vpp Makefile, make sure to match versions
         clang \
         # llvm provides llc for xdp-tools build
         llvm \
-        # golang installs gcc-12 which clang uses via auto-detection for stdc++ library.
-        # But gcc-12 omits c++ stuff, so we add it manually. libstdc++-12-dev should be enough, but entire g++ is not that heavy to add.
+        # gnu linker is used, add missing c++ library
         g++-12 \
     && \
-    ln -s /usr/lib/go-1.23/bin/go /usr/bin/go && \
-    ln -s /usr/lib/go-1.23/bin/gofmt /usr/bin/gofmt && \
+    ln -s /usr/lib/go-1.24/bin/go /usr/bin/go && \
+    ln -s /usr/lib/go-1.24/bin/gofmt /usr/bin/gofmt && \
     # set clang as default C and C++ compiler
     update-alternatives --set c++ /usr/bin/clang++ && \
     update-alternatives --set cc /usr/bin/clang &&\
@@ -83,7 +82,7 @@ RUN --mount=target=/ccache,type=cache \
     case ${BUILD_TYPE} in \
         debug) \
             target="pkg-deb-debug"; \
-            args="-DVPP_ENABLE_TRAJECTORY_TRACE=1 -DVPP_ENABLE_SANITIZE_ADDR=ON"; \
+            args="-DVPP_ENABLE_TRAJECTORY_TRACE=1"; \
             ;; \
         release) \
             target="pkg-deb"; \
@@ -121,11 +120,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
         /debs/python3-vpp-api_*.deb \
         /debs/vpp-dev_*.deb \
         /debs/libvppinfra-dev_*.deb && \
-    if [ "${BUILD_TYPE}" = "debug" ]; then \
-        # Add stdc++ as dependency to vpp, so ASAN can intercept c++ stuff
-        apt-get install --no-install-recommends -yy patchelf && \
-        patchelf --add-needed $(realpath -s $(clang -print-file-name=libstdc++.so)) $(which vpp) && true; \
-    fi && \
     apt-get clean
 
 # use clean vpp source so as not to make the image too bloated
@@ -159,11 +153,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
     if [ "${BUILD_TYPE}" = "debug" ]; then \
         extra_debs="${extra_debs} /debs/vpp-dev_*.deb"; \
         extra_debs="${extra_debs} /debs/libvppinfra-dev_*.deb"; \
-        # libasan8 compatible with clang-14/gcc-12
-        extra_debs="${extra_debs} libasan8"; \
-        # Add stdc++ as dependency to vpp, so ASAN can intercept c++ stuff
-        extra_debs="${extra_debs} patchelf"; \
-        extra_debs="${extra_debs} libstdc++6"; \
     fi && \
     apt-get install --no-install-recommends -yy \
         /debs/vpp_*.deb \
@@ -174,10 +163,6 @@ RUN --mount=target=/var/lib/apt/lists,type=cache,sharing=private \
         /debs/libvppinfra_*.deb \
         /debs/python3-vpp-api_*.deb \
         ${extra_debs} && \
-    if [ "${BUILD_TYPE}" = "debug" ]; then \
-        # Add stdc++ as dependency to vpp, so ASAN can intercept c++ stuff
-        patchelf --add-needed /usr/lib/gcc/x86_64-linux-gnu/12/libstdc++.so $(which vpp) && true; \
-    fi && \
     apt-get clean
 
 ENTRYPOINT /usr/bin/vpp
