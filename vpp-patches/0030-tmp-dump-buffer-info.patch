@@ -1,0 +1,140 @@
+From 295428adfe0bd53b5c6e2e0fd8ffde584b5437e0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Tomasz=20Dzi=C4=99cio=C5=82?=
+ <tomasz.dzieciol@travelping.com>
+Date: Thu, 14 Nov 2024 10:07:10 +0100
+Subject: [PATCH] tmp: dump buffer info
+
+---
+ src/plugins/af_packet/device.c | 60 +++++++++++++++++++++++++++++++---
+ 1 file changed, 56 insertions(+), 4 deletions(-)
+
+diff --git a/src/plugins/af_packet/device.c b/src/plugins/af_packet/device.c
+index 204eb0134..93902c7cd 100644
+--- a/src/plugins/af_packet/device.c
++++ b/src/plugins/af_packet/device.c
+@@ -279,9 +279,26 @@ fill_cksum_offload (vlib_buffer_t *b0, vnet_virtio_net_hdr_t *vnet_hdr)
+     }
+ }
+ 
+-VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+-						  vlib_node_runtime_t * node,
+-						  vlib_frame_t * frame)
++static void
++debug_dump_buffer (char *tag, u8 *data, size_t max_len)
++{
++#define BUFFER_DUMP_BYTES 100
++  if (max_len > BUFFER_DUMP_BYTES)
++    {
++      max_len = BUFFER_DUMP_BYTES;
++    }
++
++  u8 *s = NULL;
++  for (int i = 0; i < max_len; ++i)
++    {
++      s = format (s, "%02x ", *(data + i));
++    }
++
++  clib_warning ("DEBUG: %s: len: %lu, dump: %s", tag, max_len, s);
++}
++
++VNET_DEVICE_CLASS_TX_FN (af_packet_device_class)
++(vlib_main_t *vm, vlib_node_runtime_t *node, vlib_frame_t *frame)
+ {
+   af_packet_main_t *apm = &af_packet_main;
+   vnet_hw_if_tx_frame_t *tf = vlib_frame_scalar_args (frame);
+@@ -333,6 +350,12 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	    }
+ 
+ 	  b0 = vlib_get_buffer (vm, bi);
++	  clib_warning ("DEBUG: buffer offsets: b: %p, l2: %d, l3: %d, l4: "
++			"%d, curr: %d, len: %u",
++			b0, vnet_buffer (b0)->l2_hdr_offset,
++			vnet_buffer (b0)->l3_hdr_offset,
++			vnet_buffer (b0)->l4_hdr_offset,
++			b0->current_data, b0->current_length);
+ 
+ 	  if (PREDICT_TRUE (is_cksum_gso_enabled))
+ 	    {
+@@ -348,6 +371,12 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 		fill_cksum_offload (b0, vnet_hdr);
+ 	    }
+ 
++	  debug_dump_buffer ("AF_PACKET TX TPv2: buf",
++			     vlib_buffer_get_current (b0), b0->current_length);
++
++	  clib_warning ("DEBUG: AF_PACKET TX TPv2: offset: %u", offset);
++	  u32 original_offset = offset;
++
+ 	  len = b0->current_length;
+ 	  clib_memcpy_fast ((u8 *) tph2 + tpacket_align + offset,
+ 			    vlib_buffer_get_current (b0), len);
+@@ -357,6 +386,8 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	    {
+ 	      b0 = vlib_get_buffer (vm, b0->next_buffer);
+ 	      len = b0->current_length;
++	      debug_dump_buffer ("AF_PACKET TX TPv2: buf",
++				 (u8 *) vlib_buffer_get_current (b0), len);
+ 	      clib_memcpy_fast ((u8 *) tph2 + tpacket_align + offset,
+ 				vlib_buffer_get_current (b0), len);
+ 	      offset += len;
+@@ -366,6 +397,9 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	  tph2->tp_status = TP_STATUS_SEND_REQUEST;
+ 	  n_sent++;
+ 
++	  debug_dump_buffer ("AF_PACKET TX TPv2: hdr", (u8 *) tph2,
++			     tpacket_align + original_offset);
++
+ 	  tx_frame = (tx_frame + 1) % frame_num;
+ 
+ 	nextv2:
+@@ -397,7 +431,13 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	      goto nextv3;
+ 	    }
+ 
+-      b0 = vlib_get_buffer (vm, bi);
++	  b0 = vlib_get_buffer (vm, bi);
++	  clib_warning ("DEBUG: buffer offsets: b: %p, l2: %d, l3: %d, l4: "
++			"%d, curr: %d, len: %u",
++			b0, vnet_buffer (b0)->l2_hdr_offset,
++			vnet_buffer (b0)->l3_hdr_offset,
++			vnet_buffer (b0)->l4_hdr_offset,
++			b0->current_data, b0->current_length);
+ 
+ 	  if (PREDICT_TRUE (is_cksum_gso_enabled))
+ 	    {
+@@ -413,6 +453,13 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 		fill_cksum_offload (b0, vnet_hdr);
+ 	    }
+ 
++	  clib_warning ("DEBUG: AF_PACKET TX TPv3: offset: %u", offset);
++	  u32 original_offset = offset;
++
++	  debug_dump_buffer ("AF_PACKET TX TPv3: buf",
++			     (u8 *) vlib_buffer_get_current (b0),
++			     b0->current_length);
++
+ 	  len = b0->current_length;
+ 	  clib_memcpy_fast ((u8 *) tph3 + tpacket_align + offset,
+ 			    vlib_buffer_get_current (b0), len);
+@@ -422,6 +469,8 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	    {
+ 	      b0 = vlib_get_buffer (vm, b0->next_buffer);
+ 	      len = b0->current_length;
++	      debug_dump_buffer ("AF_PACKET TX TPv3: buf",
++				 (u8 *) vlib_buffer_get_current (b0), len);
+ 	      clib_memcpy_fast ((u8 *) tph3 + tpacket_align + offset,
+ 				vlib_buffer_get_current (b0), len);
+ 	      offset += len;
+@@ -431,6 +480,9 @@ VNET_DEVICE_CLASS_TX_FN (af_packet_device_class) (vlib_main_t * vm,
+ 	  tph3->tp_status = TP_STATUS_SEND_REQUEST;
+ 	  n_sent++;
+ 
++	  debug_dump_buffer ("AF_PACKET TX TPv3: hdr", (u8 *) tph3,
++			     tpacket_align + original_offset);
++
+       tx_frame = (tx_frame + 1) % frame_num;
+ 
+ 	nextv3:
+-- 
+2.39.5
+
