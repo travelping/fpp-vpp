@@ -1,4 +1,4 @@
-From af871abd542a60b8e71a3030fa264432daabd4df Mon Sep 17 00:00:00 2001
+From 066325af67dca0f303b893344fe589fb550c4143 Mon Sep 17 00:00:00 2001
 From: Marcin Zyla <marcin.zyla@vprocess.pl>
 Date: Tue, 16 Sep 2025 12:59:31 +0200
 Subject: [PATCH] fix: deleting interfaces too fast causes stat segment
