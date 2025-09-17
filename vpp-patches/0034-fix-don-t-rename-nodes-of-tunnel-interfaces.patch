@@ -1,0 +1,33 @@
+From a0b31fc93cb0ac37dbe5085adb6c86a9c9f7284c Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Wed, 17 Sep 2025 13:00:28 +0200
+Subject: [PATCH] fix: don't rename nodes of tunnel interfaces
+
+---
+ src/vnet/interface.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/src/vnet/interface.c b/src/vnet/interface.c
+index db47d42c8..c4a852895 100644
+--- a/src/vnet/interface.c
++++ b/src/vnet/interface.c
+@@ -1577,9 +1577,13 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
+   hash_unset_mem (im->hw_interface_by_name, old_name);
+   hash_set_mem (im->hw_interface_by_name, hw->name, hw_if_index);
+ 
+-  /* rename tx/output nodes */
+-  vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
+-  vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
++  /* only rename nodes of non-tunnel ifaces */
++  if (hw->dev_class_index != vxlan_device_class.index && hw->dev_class_index != gre_device_class.index)
++    {
++      /* rename tx/output nodes */
++      vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
++      vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
++    }
+ 
+   /* rename statseg directory */
+   statseg_interface_rename (vnm, hw->sw_if_index);
+-- 
+2.51.0
+
