@@ -1,0 +1,155 @@
+From 7102aad8f4987d249a133220f24dd15fa10bef08 Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Wed, 17 Sep 2025 13:00:28 +0200
+Subject: [PATCH] fix: don't rename nodes of tunnel interfaces
+
+---
+ extras/deprecated/vnet/vxlan-gbp/vxlan_gbp.c |  1 +
+ src/plugins/geneve/geneve.c                  |  1 +
+ src/plugins/gre/gre.c                        |  1 +
+ src/plugins/gtpu/gtpu.c                      |  1 +
+ src/plugins/l2tp/l2tp.c                      |  1 +
+ src/plugins/vxlan/vxlan.c                    |  1 +
+ src/vnet/interface.c                         | 19 +++++++++++++------
+ src/vnet/interface.h                         |  3 +++
+ src/vnet/vxlan-gpe/vxlan_gpe.c               |  1 +
+ 9 files changed, 23 insertions(+), 6 deletions(-)
+
+diff --git a/extras/deprecated/vnet/vxlan-gbp/vxlan_gbp.c b/extras/deprecated/vnet/vxlan-gbp/vxlan_gbp.c
+index eb685b8a4..b4a9ce341 100644
+--- a/extras/deprecated/vnet/vxlan-gbp/vxlan_gbp.c
++++ b/extras/deprecated/vnet/vxlan-gbp/vxlan_gbp.c
+@@ -108,6 +108,7 @@ VNET_DEVICE_CLASS (vxlan_gbp_device_class, static) = {
+   .format_device_name = format_vxlan_gbp_name,
+   .format_tx_trace = format_vxlan_gbp_encap_trace,
+   .admin_up_down_function = vxlan_gbp_interface_admin_up_down,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+diff --git a/src/plugins/geneve/geneve.c b/src/plugins/geneve/geneve.c
+index 2bdd16275..b58b91600 100644
+--- a/src/plugins/geneve/geneve.c
++++ b/src/plugins/geneve/geneve.c
+@@ -121,6 +121,7 @@ VNET_DEVICE_CLASS (geneve_device_class, static) = {
+   .format_tx_trace = format_geneve_encap_trace,
+   .admin_up_down_function = geneve_interface_admin_up_down,
+   .mac_addr_change_function = geneve_mac_change,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+diff --git a/src/plugins/gre/gre.c b/src/plugins/gre/gre.c
+index fee81c2b4..43495fcd3 100644
+--- a/src/plugins/gre/gre.c
++++ b/src/plugins/gre/gre.c
+@@ -763,6 +763,7 @@ VNET_DEVICE_CLASS (gre_device_class) = {
+   .format_tx_trace = format_gre_tx_trace,
+   .admin_up_down_function = gre_interface_admin_up_down,
+   .ip_tun_desc = gre_tunnel_desc,
++  .has_common_nodes = 1,
+ #ifdef SOON
+   .clear counter = 0;
+ #endif
+diff --git a/src/plugins/gtpu/gtpu.c b/src/plugins/gtpu/gtpu.c
+index 1307794b9..499ac7e7f 100644
+--- a/src/plugins/gtpu/gtpu.c
++++ b/src/plugins/gtpu/gtpu.c
+@@ -160,6 +160,7 @@ VNET_DEVICE_CLASS (gtpu_device_class,static) = {
+   .format_device_name = format_gtpu_name,
+   .format_tx_trace = format_gtpu_encap_trace,
+   .admin_up_down_function = gtpu_interface_admin_up_down,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+diff --git a/src/plugins/l2tp/l2tp.c b/src/plugins/l2tp/l2tp.c
+index a975fa7f0..6a9be4510 100644
+--- a/src/plugins/l2tp/l2tp.c
++++ b/src/plugins/l2tp/l2tp.c
+@@ -259,6 +259,7 @@ VNET_DEVICE_CLASS (l2tpv3_device_class,static) = {
+   .name = "L2TPv3",
+   .format_device_name = format_l2tpv3_name,
+   .name_renumber = l2tpv3_name_renumber,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+diff --git a/src/plugins/vxlan/vxlan.c b/src/plugins/vxlan/vxlan.c
+index f1ab7a7cb..668fa4274 100644
+--- a/src/plugins/vxlan/vxlan.c
++++ b/src/plugins/vxlan/vxlan.c
+@@ -134,6 +134,7 @@ VNET_DEVICE_CLASS (vxlan_device_class, static) = {
+   .format_device_name = format_vxlan_name,
+   .format_tx_trace = format_vxlan_encap_trace,
+   .admin_up_down_function = vxlan_interface_admin_up_down,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+diff --git a/src/vnet/interface.c b/src/vnet/interface.c
+index db47d42c8..7bd679d84 100644
+--- a/src/vnet/interface.c
++++ b/src/vnet/interface.c
+@@ -1149,9 +1149,9 @@ vnet_delete_hw_interface (vnet_main_t * vnm, u32 hw_if_index)
+ 	}
+ 
+       vlib_node_rename (vm, hw->output_node_index,
+-			"interface-%d-output-deleted", hw_if_index);
+-      vlib_node_rename (vm, hw->tx_node_index, "interface-%d-tx-deleted",
+-			hw_if_index);
++			"interface-%d-%d-output-deleted", hw_if_index, hw->output_node_index);
++      vlib_node_rename (vm, hw->tx_node_index, "interface-%d-%d-tx-deleted",
++			hw_if_index, hw->tx_node_index);
+       vlib_unregister_errors (vm, hw->output_node_index);
+       vlib_unregister_errors (vm, hw->tx_node_index);
+       vec_add2 (im->deleted_hw_interface_nodes, dn, 1);
+@@ -1577,9 +1577,16 @@ vnet_rename_interface (vnet_main_t * vnm, u32 hw_if_index, char *new_name)
+   hash_unset_mem (im->hw_interface_by_name, old_name);
+   hash_set_mem (im->hw_interface_by_name, hw->name, hw_if_index);
+ 
+-  /* rename tx/output nodes */
+-  vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
+-  vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
++  vnet_device_class_t *dev_class =
++    vnet_get_device_class (vnm, hw->dev_class_index);
++
++  /* only rename nodes of non-tunnel ifaces */
++  if (!dev_class->has_common_nodes)
++    {
++      /* rename tx/output nodes */
++      vlib_node_rename (vm, hw->tx_node_index, "%v-tx", hw->name);
++      vlib_node_rename (vm, hw->output_node_index, "%v-output", hw->name);
++    }
+ 
+   /* rename statseg directory */
+   statseg_interface_rename (vnm, hw->sw_if_index);
+diff --git a/src/vnet/interface.h b/src/vnet/interface.h
+index f0cb540f9..5f6c48477 100644
+--- a/src/vnet/interface.h
++++ b/src/vnet/interface.h
+@@ -290,6 +290,9 @@ typedef struct _vnet_device_class
+   /* Interface to set rss queues of the interface */
+   vnet_interface_rss_queues_set_t *set_rss_queues_function;
+ 
++  /* Interfaces of this device share nodes, so dont rename them when renaming ifaces */
++  u8 has_common_nodes;
++
+ } vnet_device_class_t;
+ 
+ u32 vnet_register_device_class (vlib_main_t *, vnet_device_class_t *);
+diff --git a/src/vnet/vxlan-gpe/vxlan_gpe.c b/src/vnet/vxlan-gpe/vxlan_gpe.c
+index 5919e0f0d..f6eb0ff1f 100644
+--- a/src/vnet/vxlan-gpe/vxlan_gpe.c
++++ b/src/vnet/vxlan-gpe/vxlan_gpe.c
+@@ -150,6 +150,7 @@ VNET_DEVICE_CLASS (vxlan_gpe_device_class,static) = {
+   .format_device_name = format_vxlan_gpe_name,
+   .format_tx_trace = format_vxlan_gpe_encap_trace,
+   .admin_up_down_function = vxlan_gpe_interface_admin_up_down,
++  .has_common_nodes = 1,
+ };
+ /* *INDENT-ON* */
+ 
+-- 
+2.51.0
+
