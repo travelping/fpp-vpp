@@ -1,0 +1,241 @@
+From cd899f8f3a9967e5e046ff16a0bf20dc8605ad63 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Thu, 31 Jul 2025 10:51:38 +0200
+Subject: [PATCH] bump xdp-tools to 1.5.5
+
+---
+ build/external/packages/xdp-tools.mk          |  4 +-
+ ...ibxdp-add-fPIC-with-static-lib-build.patch | 26 ---------
+ ...fix-asm-types.h-file-not-found-issue.patch | 32 -----------
+ ...0004-Fix-transposed-calloc-arguments.patch | 54 -------------------
+ ...ibxdp-add-fPIC-with-static-lib-build.patch | 26 +++++++++
+ ...aybe-uninitialized-compiler-warning.patch} | 14 ++---
+ 6 files changed, 35 insertions(+), 121 deletions(-)
+ delete mode 100644 build/external/patches/xdp-tools_1.2.9/0001-libxdp-add-fPIC-with-static-lib-build.patch
+ delete mode 100644 build/external/patches/xdp-tools_1.2.9/0002-libxdp-fix-asm-types.h-file-not-found-issue.patch
+ delete mode 100644 build/external/patches/xdp-tools_1.2.9/0004-Fix-transposed-calloc-arguments.patch
+ create mode 100644 build/external/patches/xdp-tools_1.5.5/0001-libxdp-add-fPIC-with-static-lib-build.patch
+ rename build/external/patches/{xdp-tools_1.2.9/0003-libxdp-fix-maybe-uninitialized-compiler-warning.patch => xdp-tools_1.5.5/0002-libxdp-fix-maybe-uninitialized-compiler-warning.patch} (71%)
+
+diff --git a/build/external/packages/xdp-tools.mk b/build/external/packages/xdp-tools.mk
+index b65ae1361..3745f9030 100644
+--- a/build/external/packages/xdp-tools.mk
++++ b/build/external/packages/xdp-tools.mk
+@@ -12,9 +12,9 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-xdp-tools_version             := 1.2.9
++xdp-tools_version             := 1.5.5
+ xdp-tools_tarball             := xdp-tools-$(xdp-tools_version).tar.gz
+-xdp-tools_tarball_md5sum_1.2.9:= 6e4a49ceea8354bb7bb3b55990e9aed7
++xdp-tools_tarball_md5sum_1.5.5:= e0dce3935fe44a7eb91d667037d5c0e5
+ xdp-tools_tarball_md5sum      := $(xdp-tools_tarball_md5sum_$(xdp-tools_version))
+ xdp-tools_tarball_strip_dirs  := 1
+ xdp-tools_url                 := https://github.com/xdp-project/xdp-tools/releases/download/v$(xdp-tools_version)/$(xdp-tools_tarball)
+diff --git a/build/external/patches/xdp-tools_1.2.9/0001-libxdp-add-fPIC-with-static-lib-build.patch b/build/external/patches/xdp-tools_1.2.9/0001-libxdp-add-fPIC-with-static-lib-build.patch
+deleted file mode 100644
+index 98b85a271..000000000
+--- a/build/external/patches/xdp-tools_1.2.9/0001-libxdp-add-fPIC-with-static-lib-build.patch
++++ /dev/null
+@@ -1,26 +0,0 @@
+-From e83f80443a2f23a68037bf4c7ba16b3723d193a4 Mon Sep 17 00:00:00 2001
+-From: Yulong <yulong.pei@intel.com>
+-Date: Tue, 3 Jan 2023 14:16:17 +0000
+-Subject: [PATCH] libxdp: add fPIC with static lib build
+-
+-Signed-off-by: Yulong <yulong.pei@intel.com>
+----
+- lib/libxdp/Makefile | 2 +-
+- 1 file changed, 1 insertion(+), 1 deletion(-)
+-
+-diff --git a/lib/libxdp/Makefile b/lib/libxdp/Makefile
+-index 358b751..a9bb414 100644
+---- a/lib/libxdp/Makefile
+-+++ b/lib/libxdp/Makefile
+-@@ -88,7 +88,7 @@ $(SHARED_OBJDIR):
+- 	$(Q)mkdir -p $(SHARED_OBJDIR)
+- 
+- $(STATIC_OBJDIR)/%.o: %.c $(EXTRA_LIB_DEPS) | $(STATIC_OBJDIR)
+--	$(QUIET_CC)$(CC) $(CFLAGS) $(CPPFLAGS) -D LIBXDP_STATIC=1 -Wall -I../../headers -c $< -o $@
+-+	$(QUIET_CC)$(CC) $(CFLAGS) $(CPPFLAGS) -fPIC -D LIBXDP_STATIC=1 -Wall -I../../headers -c $< -o $@
+- 
+- $(SHARED_OBJDIR)/%.o: %.c $(EXTRA_LIB_DEPS) | $(SHARED_OBJDIR)
+- 	$(QUIET_CC)$(CC) $(CFLAGS) $(CPPFLAGS) $(SHARED_CFLAGS) -Wall -I../../headers -c $< -o $@
+--- 
+-2.25.1
+-
+diff --git a/build/external/patches/xdp-tools_1.2.9/0002-libxdp-fix-asm-types.h-file-not-found-issue.patch b/build/external/patches/xdp-tools_1.2.9/0002-libxdp-fix-asm-types.h-file-not-found-issue.patch
+deleted file mode 100644
+index 1ba3cc541..000000000
+--- a/build/external/patches/xdp-tools_1.2.9/0002-libxdp-fix-asm-types.h-file-not-found-issue.patch
++++ /dev/null
+@@ -1,32 +0,0 @@
+-From 51ea3b590f5e0a6b34b5148af43996029fd60ac6 Mon Sep 17 00:00:00 2001
+-From: Yulong <yulong.pei@intel.com>
+-Date: Fri, 6 Jan 2023 07:46:10 +0000
+-Subject: [PATCH 2/2] libxdp: fix asm/types.h file not found issue
+-
+-The file asm/types.h located in /usr/include/$(uname -m)-linux-gnu,
+-the path string already assigned to ARCH_INCLUDES when run xdp-tools
+-configure, so include ARCH_INCLUDES to CFLAGS and BPF_CFLAGS directly.
+-
+-Signed-off-by: Yulong <yulong.pei@intel.com>
+----
+- lib/defines.mk | 4 ++--
+- 1 file changed, 2 insertions(+), 2 deletions(-)
+-
+-diff --git a/lib/defines.mk b/lib/defines.mk
+-index f134c43..515411c 100644
+---- a/lib/defines.mk
+-+++ b/lib/defines.mk
+-@@ -40,8 +40,8 @@ endif
+- 
+- DEFINES += -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
+- 
+--CFLAGS += -std=gnu11 -Wextra -Werror $(DEFINES)
+--BPF_CFLAGS += $(DEFINES) $(filter -ffile-prefix-map=%,$(CFLAGS))
+-+CFLAGS += -std=gnu11 -Wextra -Werror $(DEFINES) $(ARCH_INCLUDES)
+-+BPF_CFLAGS += $(DEFINES) $(filter -ffile-prefix-map=%,$(CFLAGS)) $(ARCH_INCLUDES)
+- 
+- CONFIGMK := $(LIB_DIR)/../config.mk
+- LIBMK := Makefile $(CONFIGMK) $(LIB_DIR)/defines.mk $(LIB_DIR)/common.mk $(LIB_DIR)/../version.mk
+--- 
+-2.25.1
+-
+diff --git a/build/external/patches/xdp-tools_1.2.9/0004-Fix-transposed-calloc-arguments.patch b/build/external/patches/xdp-tools_1.2.9/0004-Fix-transposed-calloc-arguments.patch
+deleted file mode 100644
+index 1e9c15005..000000000
+--- a/build/external/patches/xdp-tools_1.2.9/0004-Fix-transposed-calloc-arguments.patch
++++ /dev/null
+@@ -1,54 +0,0 @@
+-From b184d103bd767e2286cdb2b0639a2470dce205d5 Mon Sep 17 00:00:00 2001
+-From: =?UTF-8?q?Toke=20H=C3=B8iland-J=C3=B8rgensen?= <toke@redhat.com>
+-Date: Thu, 18 Jan 2024 13:22:47 +0100
+-Subject: [PATCH] Fix transposed calloc() arguments
+-MIME-Version: 1.0
+-Content-Type: text/plain; charset=UTF-8
+-Content-Transfer-Encoding: 8bit
+-
+-Calls to calloc() are supposed to have the number of elements as the first
+-argument, but we erroneously transposed the arguments in a couple of places. It
+-seems GCC 14 has started to warn about this, which exposed this as build
+-breakage.
+-
+-Signed-off-by: Toke Høiland-Jørgensen <toke@redhat.com>
+----
+- lib/util/params.c               | 2 +-
+- lib/util/xpcapng.c              | 6 +++---
+- xdp-trafficgen/xdp-trafficgen.c | 4 ++--
+- 3 files changed, 6 insertions(+), 6 deletions(-)
+-
+-diff --git a/lib/util/xpcapng.c b/lib/util/xpcapng.c
+-index e453b88..8cfc947 100644
+---- a/lib/util/xpcapng.c
+-+++ b/lib/util/xpcapng.c
+-@@ -226,7 +226,7 @@ static bool pcapng_write_shb(struct xpcapng_dumper *pd, const char *comment,
+- 	shb_length += sizeof(uint32_t);
+- 
+- 	/* Allocate the SHB and fill it. */
+--	shb = calloc(shb_length, 1);
+-+	shb = calloc(1, shb_length);
+- 	if (shb == NULL) {
+- 		errno = ENOMEM;
+- 		return false;
+-@@ -318,7 +318,7 @@ static bool pcapng_write_idb(struct xpcapng_dumper *pd, const char *name,
+- 	idb_length += sizeof(uint32_t);
+- 
+- 	/* Allocate the IDB and fill it. */
+--	idb = calloc(idb_length, 1);
+-+	idb = calloc(1, idb_length);
+- 	if (idb == NULL) {
+- 		errno = ENOMEM;
+- 		return false;
+-@@ -549,7 +549,7 @@ struct xpcapng_dumper *xpcapng_dump_open(const char *file,
+- 		goto error_exit;
+- 	}
+- 
+--	pd = calloc(sizeof(*pd), 1);
+-+	pd = calloc(1, sizeof(*pd));
+- 	if (pd == NULL) {
+- 		errno = ENOMEM;
+- 		goto error_exit;
+--- 
+-2.43.0
+-
+diff --git a/build/external/patches/xdp-tools_1.5.5/0001-libxdp-add-fPIC-with-static-lib-build.patch b/build/external/patches/xdp-tools_1.5.5/0001-libxdp-add-fPIC-with-static-lib-build.patch
+new file mode 100644
+index 000000000..61f144731
+--- /dev/null
++++ b/build/external/patches/xdp-tools_1.5.5/0001-libxdp-add-fPIC-with-static-lib-build.patch
+@@ -0,0 +1,26 @@
++From ed3c7a0d204127521cb0bd11160d003a0cbb251e Mon Sep 17 00:00:00 2001
++From: Yulong <yulong.pei@intel.com>
++Date: Tue, 3 Jan 2023 14:16:17 +0000
++Subject: [PATCH 1/2] libxdp: add fPIC with static lib build
++
++Signed-off-by: Yulong <yulong.pei@intel.com>
++---
++ lib/libxdp/Makefile | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/lib/libxdp/Makefile b/lib/libxdp/Makefile
++index 4716fb0..f1828da 100644
++--- a/lib/libxdp/Makefile
+++++ b/lib/libxdp/Makefile
++@@ -20,7 +20,7 @@ MAN_FILES := $(MAN_PAGE)
++ TEST_DIR := tests
++ 
++ SHARED_CFLAGS += -fPIC -DSHARED
++-STATIC_CFLAGS += -D LIBXDP_STATIC=1
+++STATIC_CFLAGS += -fPIC -D LIBXDP_STATIC=1
++ LIB_HEADERS := $(wildcard $(HEADER_DIR)/xdp/*.h)
++ BPF_HEADERS := $(wildcard $(HEADER_DIR)/bpf/*.h) $(wildcard $(HEADER_DIR)/xdp/*.h)
++ EXTRA_LIB_DEPS := $(OBJECT_LIBBPF) $(LIBMK) $(LIB_OBJS) $(LIB_HEADERS) compat.h libxdp_internal.h xsk_def_xdp_prog.h bpf_instr.h
++-- 
++2.50.1
++
+diff --git a/build/external/patches/xdp-tools_1.2.9/0003-libxdp-fix-maybe-uninitialized-compiler-warning.patch b/build/external/patches/xdp-tools_1.5.5/0002-libxdp-fix-maybe-uninitialized-compiler-warning.patch
+similarity index 71%
+rename from build/external/patches/xdp-tools_1.2.9/0003-libxdp-fix-maybe-uninitialized-compiler-warning.patch
+rename to build/external/patches/xdp-tools_1.5.5/0002-libxdp-fix-maybe-uninitialized-compiler-warning.patch
+index 6ab74171d..ffa9349b0 100644
+--- a/build/external/patches/xdp-tools_1.2.9/0003-libxdp-fix-maybe-uninitialized-compiler-warning.patch
++++ b/build/external/patches/xdp-tools_1.5.5/0002-libxdp-fix-maybe-uninitialized-compiler-warning.patch
+@@ -1,7 +1,7 @@
+-From 3033b9bdbcdb270f15373b27933d554f847e01d4 Mon Sep 17 00:00:00 2001
++From 804f7d523e111c49477e9eca986e3d7cccb28ffc Mon Sep 17 00:00:00 2001
+ From: Yulong <yulong.pei@intel.com>
+ Date: Fri, 6 Jan 2023 14:31:24 +0000
+-Subject: [PATCH 3/3] libxdp: fix maybe-uninitialized compiler warning
++Subject: [PATCH 2/2] libxdp: fix maybe-uninitialized compiler warning
+ 
+ Signed-off-by: Yulong <yulong.pei@intel.com>
+ ---
+@@ -9,18 +9,18 @@ Signed-off-by: Yulong <yulong.pei@intel.com>
+  1 file changed, 1 insertion(+), 1 deletion(-)
+ 
+ diff --git a/lib/common.mk b/lib/common.mk
+-index 56c0406..f7a88a1 100644
++index ce24c48..e964bd8 100644
+ --- a/lib/common.mk
+ +++ b/lib/common.mk
+-@@ -101,7 +101,7 @@ $(LIB_OBJS): %.o: %.c %.h $(LIB_H)
++@@ -104,7 +104,7 @@ $(LIB_OBJS): %.o: %.c %.h $(LIB_H)
+  
+  ALL_EXEC_TARGETS=$(USER_TARGETS) $(TEST_TARGETS)
+- $(ALL_EXEC_TARGETS): %: %.c  $(OBJECT_LIBBPF) $(OBJECT_LIBXDP) $(LIBMK) $(LIB_OBJS) $(KERN_USER_H) $(EXTRA_DEPS) $(EXTRA_USER_DEPS)
++ $(ALL_EXEC_TARGETS): %: %.c  $(OBJECT_LIBBPF) $(OBJECT_LIBXDP) $(LIBMK) $(LIB_OBJS) $(KERN_USER_H) $(EXTRA_DEPS) $(EXTRA_USER_DEPS) $(BPF_SKEL_H) $(USER_EXTRA_C)
+ -	$(QUIET_CC)$(CC) -Wall $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIB_OBJS) \
+ +	$(QUIET_CC)$(CC) -Wall -Wno-maybe-uninitialized $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $@ $(LIB_OBJS) \
+- 	 $< $(LDLIBS)
++ 	 $< $(USER_EXTRA_C) $(LDLIBS)
+  
+  $(XDP_OBJ): %.o: %.c $(KERN_USER_H) $(EXTRA_DEPS) $(BPF_HEADERS) $(LIBMK)
+ -- 
+-2.25.1
++2.50.1
+ 
+-- 
+2.50.1
+

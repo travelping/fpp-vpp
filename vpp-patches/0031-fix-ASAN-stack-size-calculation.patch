@@ -1,0 +1,25 @@
+From 44e584a2004c4196f9f2eac3cb3f11fd696fa982 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Mon, 6 Jan 2025 01:13:34 +0100
+Subject: [PATCH] fix: ASAN stack size calculation
+
+---
+ src/vlib/node_funcs.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vlib/node_funcs.h b/src/vlib/node_funcs.h
+index 1beac33cf..f20396f52 100644
+--- a/src/vlib/node_funcs.h
++++ b/src/vlib/node_funcs.h
+@@ -60,7 +60,7 @@ vlib_process_start_switch_stack (vlib_main_t * vm, vlib_process_t * p)
+ #ifdef CLIB_SANITIZE_ADDR
+   void *stack = p ? (void *) p->stack : vlib_thread_stacks[vm->thread_index];
+   u32 stack_bytes =
+-    p ? (1ULL < p->log2_n_stack_bytes) : VLIB_THREAD_STACK_SIZE;
++    p ? (1ULL << p->log2_n_stack_bytes) : VLIB_THREAD_STACK_SIZE;
+   __sanitizer_start_switch_fiber (&vm->asan_stack_save, stack, stack_bytes);
+ #endif
+ }
+-- 
+2.47.1
+
