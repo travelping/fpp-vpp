@@ -1,7 +1,10 @@
 .github
 .gitlab-ci.yml
+.git
 Dockerfile
+.dockerignore
 .vscode
 .idea
 README.md
 CODEOWNERS
+
