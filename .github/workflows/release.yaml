@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  retag-base-image:
+    runs-on:
+      - ubuntu-24.04
+
+    strategy:
+      matrix:
+        build_type: [debug, release]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # for git describe
+          fetch-depth: 0
+
+      - name: Prepare repo
+        run: |
+          git config --global user.email "dummy@example.com"
+          git config --global user.name "dummy user"
+
+      - name: Login to the registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_DOMAIN }}
+          username: ${{ secrets.CUR_REGISTRY_USERNAME }}
+          password: ${{ secrets.CUR_REGISTRY_PASSWORD }}
+
+      - name: Ensure base image to retag is present
+        id: ensure-base-image-to-retag
+        run: |
+          BUILD_TYPE="${{ matrix.build_type }}" BASE_REPO="${{ vars.BASE_REPO }}" build/ensure-base-image-to-retag.sh
+
+      - name: Retag base image
+        if: steps.ensure-base-image-to-retag.outputs.image_to_retag_present == 'true'
+        run: |
+          BUILD_TYPE="${{ matrix.build_type }}" BASE_REPO="${{ vars.BASE_REPO }}" build/retag-base-image.sh
+
+    outputs:
+      debug_image_to_retag_present: ${{ steps.ensure-base-image-to-retag.outputs.debug_image_to_retag_present }}
+      release_image_to_retag_present: ${{ steps.ensure-base-image-to-retag.outputs.release_image_to_retag_present }}
+
+  rebuild-and-tag-base-release-image:
+    needs: retag-base-image
+    if: needs.retag-base-image.outputs.release_image_to_retag_present == 'false'
+    uses: ./.github/workflows/build-images.yaml
+    with:
+      build_type: release
+    secrets: inherit
+
+  rebuild-and-tag-base-debug-image:
+    needs: retag-base-image
+    if: needs.retag-base-image.outputs.debug_image_to_retag_present == 'false'
+    uses: ./.github/workflows/build-images.yaml
+    with:
+      build_type: debug
+    secrets: inherit
+
+  changelog:
+    runs-on:
+      - ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Build Changelog
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          configuration: "changelog-config.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post the release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.build_changelog.outputs.changelog }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

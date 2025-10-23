@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build-images:
+    strategy:
+      matrix:
+        build_type: [debug, release]
+
+    uses: ./.github/workflows/build-images.yaml
+    with:
+      build_type: ${{ matrix.build_type }}
+    secrets: inherit
+
