@@ -1,0 +1,34 @@
+From 7cf1569d5d6e3fe27987e44b1243c2561498d421 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Mon, 20 Oct 2025 14:58:26 +0200
+Subject: [PATCH] vlib: fix typo in ASAN fiber switching
+
+Fixes ASAN error
+"finishing a fiber switch that has not started"
+
+Type: fix
+
+Change-Id: I2f3153fb6635ebcad17942ae95889027c40c2525
+Signed-off-by: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+---
+ src/vlib/node_funcs.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/vlib/node_funcs.h b/src/vlib/node_funcs.h
+index a5096911d..2e5d9ef86 100644
+--- a/src/vlib/node_funcs.h
++++ b/src/vlib/node_funcs.h
+@@ -71,8 +71,9 @@ vlib_process_finish_switch_stack (vlib_main_t * vm)
+   const void *bottom_old;
+   size_t size_old;
+ 
+-  __sanitizer_finish_switch_fiber (&vm->asan_stack_save, &bottom_old,
++  __sanitizer_finish_switch_fiber (vm->asan_stack_save, &bottom_old,
+ 				   &size_old);
++  vm->asan_stack_save = NULL;
+ #endif
+ }
+ 
+-- 
+2.51.1.dirty
+

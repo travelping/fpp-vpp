@@ -1,0 +1,38 @@
+From bf0a6f8876dfb5e748e3786714595d6817a573ec Mon Sep 17 00:00:00 2001
+From: XiaomingJiang <jiangxiaoming@outlook.com>
+Date: Mon, 23 Sep 2024 16:42:40 +0800
+Subject: [PATCH] http_static: fix memory hss_session using after be freed
+
+Type: fix
+
+Change-Id: Ic3d3de4198310361de876a8224e4f7cd0b48b698
+Signed-off-by: XiaomingJiang <jiangxiaoming@outlook.com>
+---
+ src/plugins/http_static/static_server.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/plugins/http_static/static_server.c b/src/plugins/http_static/static_server.c
+index 9d9a68f7d..48e71f516 100644
+--- a/src/plugins/http_static/static_server.c
++++ b/src/plugins/http_static/static_server.c
+@@ -58,8 +58,6 @@ hss_session_free (hss_session_t *hs)
+ {
+   hss_main_t *hsm = &hss_main;
+ 
+-  pool_put (hsm->sessions[hs->thread_index], hs);
+-
+   if (CLIB_DEBUG)
+     {
+       u32 save_thread_index;
+@@ -68,6 +66,8 @@ hss_session_free (hss_session_t *hs)
+       memset (hs, 0xfa, sizeof (*hs));
+       hs->thread_index = save_thread_index;
+     }
++
++  pool_put (hsm->sessions[hs->thread_index], hs);
+ }
+ 
+ /** \brief Disconnect a session
+-- 
+2.51.1.dirty
+
