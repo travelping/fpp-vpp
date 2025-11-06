@@ -2,7 +2,7 @@
 
 set -o nounset
 
-: ${BASE_REPO:="quay.io/travelping/vpp-base"}
+: ${BASE_REPO:="quay.io/travelping/fpp-vpp"}
 : ${BASE_HASH:=$(git rev-parse HEAD)}
 : ${BUILD_TYPE:=debug}
 

@@ -3,7 +3,7 @@
 BUILD_TYPE ?= debug
 CI_BUILD ?= 0
 
-BASE_REPO ?= quay.io/travelping/vpp-base
+BASE_REPO ?= quay.io/travelping/fpp-vpp
 BASE_TAG ?= local
 BASE_HASH ?= $(shell git rev-parse HEAD)
 BUILDER_REPO ?= quay.io/travelping/vpp-builder

@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 
 : ${BUILD_TYPE:=debug}
-: ${BASE_REPO:="quay.io/travelping/vpp-base"}
+: ${BASE_REPO:="quay.io/travelping/fpp-vpp"}
 : ${BASE_HASH:=$(git rev-parse HEAD)}
 
 IMAGE_HASH_NAME="${BASE_REPO}:${BUILD_TYPE}-sha-${BASE_HASH}"
