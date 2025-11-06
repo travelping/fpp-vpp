@@ -16,7 +16,7 @@ if [[ ! -d "${SCRIPT_DIR}/../vpp" ]]; then
     "${SCRIPT_DIR}/update-vpp.sh"
 fi
 
-RELEASE_TAG="$("${SCRIPT_DIR}/../vpp/build-root/scripts/version" | sed 's/~.*//')-$(git rev-parse HEAD|cut -c1-9)"
+RELEASE_TAG="${GITHUB_REF##*/}"
 RELEASE_IMAGE_NAME="${BASE_REPO}:${RELEASE_TAG}_${BUILD_TYPE}"
 
 QUAY_IO_IMAGE_EXPIRES_AFTER="$(docker image inspect "${IMAGE_HASH_NAME}" | jq -r '.[0].Config.Labels."quay.expires-after"')"
