@@ -19,11 +19,23 @@ fi
 RELEASE_TAG="$("${SCRIPT_DIR}/../vpp/build-root/scripts/version" | sed 's/~.*//')-$(git rev-parse HEAD|cut -c1-9)"
 RELEASE_IMAGE_NAME="${BASE_REPO}:${RELEASE_TAG}_${BUILD_TYPE}"
 
-docker tag "${IMAGE_HASH_NAME}" "${RELEASE_IMAGE_NAME}"
+QUAY_IO_IMAGE_EXPIRES_AFTER="$(docker image inspect "${IMAGE_HASH_NAME}" | jq -r '.[0].Config.Labels."quay.expires-after"')"
+if [[ "${QUAY_IO_IMAGE_EXPIRES_AFTER}" == null ]]; then
+    docker tag "${IMAGE_HASH_NAME}" "${RELEASE_IMAGE_NAME}"
+else
+    echo "FROM ${IMAGE_HASH_NAME}" | docker buildx build -t "${RELEASE_IMAGE_NAME}" --label "quay.expires-after=" -
+fi
+
 docker push "${RELEASE_IMAGE_NAME}"
 
 DEV_RELEASE_IMAGE_NAME="${BASE_REPO}:${RELEASE_TAG}_dev_${BUILD_TYPE}"
 
-docker tag "${DEV_IMAGE_HASH_NAME}" "${DEV_RELEASE_IMAGE_NAME}"
+QUAY_IO_IMAGE_EXPIRES_AFTER="$(docker image inspect "${DEV_IMAGE_HASH_NAME}" | jq -r '.[0].Config.Labels."quay.expires-after"')"
+if [[ "${QUAY_IO_IMAGE_EXPIRES_AFTER}" == null ]]; then
+    docker tag "${DEV_IMAGE_HASH_NAME}" "${DEV_RELEASE_IMAGE_NAME}"
+else
+    echo "FROM ${DEV_IMAGE_HASH_NAME}" | docker buildx build -t "${DEV_RELEASE_IMAGE_NAME}" --label "quay.expires-after=" -
+fi
+
 docker push "${DEV_RELEASE_IMAGE_NAME}"
 
