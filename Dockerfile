@@ -25,7 +25,7 @@ RUN --mount=target=/vpp-src/build-root/.ccache,type=cache \
             ;; \
     esac; \
     echo "Building target: ${target} with flags ${args}" && \
-    make "-j$(nproc)" -C /vpp-src "${target}" V=1 VPP_EXTRA_CMAKE_ARGS="${args}" && \
+    make -C /vpp-src "${target}" V=1 VPP_EXTRA_CMAKE_ARGS="${args}" && \
     ccache -s && \
     mkdir -p /out/debs && \
     mv /vpp-src/build-root/*.deb /out/debs
