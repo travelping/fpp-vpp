@@ -1,0 +1,37 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+
+: ${BUILD_TYPE:=debug}
+: ${BASE_REPO:="quay.io/travelping/fpp-vpp"}
+: ${BASE_HASH:=$(git rev-parse HEAD)}
+
+IMAGE_HASH_NAME="${BASE_REPO}:${BUILD_TYPE}-sha-${BASE_HASH}"
+DEV_IMAGE_HASH_NAME="${BASE_REPO}:dev-${BUILD_TYPE}-sha-${BASE_HASH}"
+
+SCRIPT_DIR="$(dirname "${BASH_SOURCE}")"
+
+RELEASE_TAG="${GITHUB_REF##*/}"
+RELEASE_IMAGE_NAME="${BASE_REPO}:${RELEASE_TAG}_${BUILD_TYPE}"
+
+QUAY_IO_IMAGE_EXPIRES_AFTER="$(docker image inspect "${IMAGE_HASH_NAME}" | jq -r '.[0].Config.Labels."quay.expires-after"')"
+if [[ "${QUAY_IO_IMAGE_EXPIRES_AFTER}" == null ]]; then
+    docker tag "${IMAGE_HASH_NAME}" "${RELEASE_IMAGE_NAME}"
+else
+    echo "FROM ${IMAGE_HASH_NAME}" | docker buildx build -t "${RELEASE_IMAGE_NAME}" --label "quay.expires-after=" -
+fi
+
+docker push "${RELEASE_IMAGE_NAME}"
+
+DEV_RELEASE_IMAGE_NAME="${BASE_REPO}:${RELEASE_TAG}_dev_${BUILD_TYPE}"
+
+QUAY_IO_IMAGE_EXPIRES_AFTER="$(docker image inspect "${DEV_IMAGE_HASH_NAME}" | jq -r '.[0].Config.Labels."quay.expires-after"')"
+if [[ "${QUAY_IO_IMAGE_EXPIRES_AFTER}" == null ]]; then
+    docker tag "${DEV_IMAGE_HASH_NAME}" "${DEV_RELEASE_IMAGE_NAME}"
+else
+    echo "FROM ${DEV_IMAGE_HASH_NAME}" | docker buildx build -t "${DEV_RELEASE_IMAGE_NAME}" --label "quay.expires-after=" -
+fi
+
+docker push "${DEV_RELEASE_IMAGE_NAME}"
+

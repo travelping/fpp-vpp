@@ -42,7 +42,7 @@ This command gives you access to VPP CLI (`vppctl`). To see the list of availabl
 Run this script to download FD.io VPP source code to the `vpp` directory and apply downstream patches stored in the `vpp-patches` folder:
 
 ```
-hack/update-vpp.sh
+make initialize
 ```
 
 ## Contribution
@@ -51,7 +51,7 @@ You can add a new functionality or fix an encountered issue in the VPP code base
 
 To add a patch to FPP VPP, follow these steps:
 
-1. Run the `hack/update-app.sh` script to download sources and downstream patches stored in the `vpp-patches` folder.
+1. Run the `make initialize` script to download sources and downstream patches stored in the `vpp-patches` folder.
 1. Provide changes to the code in the `vpp` directory and commit the output to git.
 1. Create a patch using this command:
     ```
@@ -63,11 +63,6 @@ To add a patch to FPP VPP, follow these steps:
 
 ### Build the base image
 
-> **Warning**
->
-> You must prepare VPP source code before building an FPP VPP image.
-> Make sure that `vpp` folder is present by running `hack/update-vpp.sh` first.
-
 [`Dockerfile`](./Dockerfile) provided in this repository creates four types of build images:
 
 - `release` - optimized build with proper performance but without debug tools like `gdb`
@@ -76,29 +71,25 @@ To add a patch to FPP VPP, follow these steps:
 - `dev_release` - development image that includes tools to build a VPP plugin, used for building a `release` image with this plugin
 - `dev_debug` - development image that includes tools to build a VPP plugin, used for building a `debug` image with this plugin
 
-The type of image build is defined with `BUILD_TYPE` argument passed to `docker build`.
-The possible options are `debug` or `release`. This parameter is required during the container build.
+The type of image build is defined with the `BUILD_TYPE` argument passed to the `make` command.
+The possible options are `debug` or `release`. The default is `debug`.
 
-To build a release FPP VPP image with a patched VPP version installed inside, run:
+To build `release` and `dev_release` FPP VPP images with a patched VPP version installed inside, run:
 
 ```console
-$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_release .
+BUILD_TYPE=release make image
 ```
 
-You can set `BUILD_TYPE` to `debug` in the above command to get debug image. `latest_release` tag was applied above
-to distinguish release or debug builds.
+Remove `BUILD_TYPE` in the above command to get a debug image. The `local_release` tag was applied above to distinguish
+release builds from debug builds.
 
 ### Build dev images
 
 To support building VPP plugins using FPP VPP base image, the [`Dockerfile`](./Dockerfile) includes
 a build target called `dev-stage`. This target includes source headers needed to build the VPP plugin.
 
-To build release FPP VPP image with development tools included, run:
+FPP VPP images with development tools included are built using the base image.
 
-```console
-$ DOCKER_BUILDKIT=1 docker build --build-arg BUILD_TYPE=release -f Dockerfile -t fpp-vpp:latest_dev_release . --target dev-stage
-```
-
-`latest_dev_release` image tag was applied to distinguish between the release image that runs modified VPP and
+The `local_dev_release` image tag was applied to distinguish between the release image that runs the modified VPP and
 the development image used to build VPP plugins. `dev_release` image is required to build the VPP plugin with
 the resulting `release` type of image.
