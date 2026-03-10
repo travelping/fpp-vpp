@@ -78,6 +78,7 @@ jobs:
         run: |
           BUILD_TYPE="${{ inputs.build_type }}" \
           CI_BUILD=1 \
+          SKIP_DEPS=1 \
           BUILDKIT_PROGRESS=plain \
           DO_PUSH="${{ env.DO_PUSH }}" \
           BASE_REPO="${{ vars.BASE_REPO }}" \
