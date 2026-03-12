@@ -2,9 +2,9 @@
 
 set -e
 
-CI_BUILD="${CI_BUILD:-}"
+SKIP_DEPS="${SKIP_DEPS:-0}"
 
-if [[ "${CI_BUILD}" -eq 1 ]]; then
+if [[ "${SKIP_DEPS}" -eq 1 ]]; then
     exit 0
 fi
 
