@@ -1,78 +1,67 @@
-From 19cf5078ed7d013e2d06e6d13ea98cf5cb71b33e Mon Sep 17 00:00:00 2001
+From 618d0e4a6de5683bd0e9f13d315b091590618397 Mon Sep 17 00:00:00 2001
 From: Vladimir Zhigulin <scripath96@gmail.com>
 Date: Wed, 27 Dec 2023 15:23:18 +0100
 Subject: [PATCH] vppinfra: collect heap stats in constant time
 
-Heap stats collection time depends on amount of allocated objects and
-can cause lost packets due to hang. As solution:
-- Explicitly mark mspace_mallinfo with _slow suffix since it can cause
-noticable hangs depending on amount of allocated chunks.
+Heap stats collection does iteration over all allocated objects.
+Depending on their amount it can take noticeble amount of time. And
+thanks to global spinlock it can cause workers to lose packets.
+
+As solution:
+- Explicitly mark mspace_mallinfo with _slow suffix
 - Implement mspace_mallinfo_fast which does stats accounting during
-malloc/realloc/free calls avoiding iteration over chunks.
-- Remove USED_MMAP, FREE_CHUNKS and RELEASABLE counters, since dlmalloc
-is used in a way which prevents mmap or release of memory.
+  malloc/realloc/free calls, avoiding iteration over chunks.
+
+As consequence, STAT_MEM_FREE_CHUNKS has to be removed, since it is hard
+to track incrementally.
 
 Type: improvement
 Ticket: VPP-2092
-Signed-off-by: Vladimir Zhigulin <scripath96@gmail.com>
+Signed-off-by: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
 Change-Id: Iaa7a5dda19ce9fd0a32d55f4dd16bc62d4b0b480
 ---
- src/vlib/stats/provider_mem.c |  8 +----
- src/vppinfra/dlmalloc.c       | 67 ++++++++++++++++++++++++++++++++---
+ src/vlib/stats/provider_mem.c |  2 -
+ src/vppinfra/dlmalloc.c       | 78 +++++++++++++++++++++++++++++++++--
  src/vppinfra/dlmalloc.h       |  5 ++-
- src/vppinfra/mem_dlmalloc.c   | 13 ++-----
- 4 files changed, 70 insertions(+), 23 deletions(-)
+ src/vppinfra/mem_dlmalloc.c   |  8 ++--
+ 4 files changed, 83 insertions(+), 10 deletions(-)
 
 diff --git a/src/vlib/stats/provider_mem.c b/src/vlib/stats/provider_mem.c
-index f3a3f5d3e..bc3801f2c 100644
+index e102ea408..51978e0b5 100644
 --- a/src/vlib/stats/provider_mem.c
 +++ b/src/vlib/stats/provider_mem.c
-@@ -13,10 +13,7 @@ enum
-   STAT_MEM_TOTAL = 0,
-   STAT_MEM_USED,
+@@ -15,7 +15,6 @@ enum
    STAT_MEM_FREE,
--  STAT_MEM_USED_MMAP,
+   STAT_MEM_USED_MMAP,
    STAT_MEM_TOTAL_ALLOC,
 -  STAT_MEM_FREE_CHUNKS,
--  STAT_MEM_RELEASABLE,
+   STAT_MEM_RELEASABLE,
  } stat_mem_usage_e;
  
- /*
-@@ -36,10 +33,7 @@ stat_provider_mem_usage_update_fn (vlib_stats_collector_data_t *d)
-   cb[STAT_MEM_TOTAL] = usage.bytes_total;
-   cb[STAT_MEM_USED] = usage.bytes_used;
+@@ -38,7 +37,6 @@ stat_provider_mem_usage_update_fn (vlib_stats_collector_data_t *d)
    cb[STAT_MEM_FREE] = usage.bytes_free;
--  cb[STAT_MEM_USED_MMAP] = usage.bytes_used_mmap;
+   cb[STAT_MEM_USED_MMAP] = usage.bytes_used_mmap;
    cb[STAT_MEM_TOTAL_ALLOC] = usage.bytes_max;
 -  cb[STAT_MEM_FREE_CHUNKS] = usage.bytes_free_reclaimed;
--  cb[STAT_MEM_RELEASABLE] = usage.bytes_overhead;
+   cb[STAT_MEM_RELEASABLE] = usage.bytes_overhead;
  }
  
- /*
-@@ -55,7 +49,7 @@ vlib_stats_register_mem_heap (clib_mem_heap_t *heap)
-   vec_add1 (memory_heaps_vec, heap);
- 
-   r.entry_index = idx = vlib_stats_add_counter_vector ("/mem/%s", heap->name);
--  vlib_stats_validate (idx, 0, STAT_MEM_RELEASABLE);
-+  vlib_stats_validate (idx, 0, STAT_MEM_TOTAL_ALLOC);
- 
-   /* Create symlink */
-   vlib_stats_add_symlink (idx, STAT_MEM_USED, "/mem/%s/used", heap->name);
 diff --git a/src/vppinfra/dlmalloc.c b/src/vppinfra/dlmalloc.c
-index 5cdc6f6cc..4d8b92d20 100644
+index ac6afecf1..0bce59db8 100644
 --- a/src/vppinfra/dlmalloc.c
 +++ b/src/vppinfra/dlmalloc.c
-@@ -1179,6 +1179,9 @@ struct malloc_state {
+@@ -1179,6 +1179,10 @@ struct malloc_state {
    size_t     max_footprint;
    size_t     footprint_limit; /* zero means no limit */
    flag_t     mflags;
 +
-+  size_t     fast_stats_used_sz; /* tracking of used bytes without iteration over all chunks */
++  size_t     fast_stats_used_sz; /* tracking of used bytes */
++  size_t     fast_stats_mmap_sz; /* tracking of mmap'd bytes */
 +
  #if USE_LOCKS
    MLOCK_T    mutex;     /* locate lock among fields that rarely change */
  #endif /* USE_LOCKS */
-@@ -2084,7 +2087,30 @@ static void do_check_malloc_state(mstate m) {
+@@ -2084,7 +2088,30 @@ static void do_check_malloc_state(mstate m) {
  
  #if !NO_MALLINFO
  __clib_nosanitize_addr
@@ -86,8 +75,8 @@ index 5cdc6f6cc..4d8b92d20 100644
 +      size_t used = m->fast_stats_used_sz;
 +
 +      nm.arena    = m->footprint;
-+      nm.ordblks  = 0;
-+      nm.hblkhd   = 0;
++      nm.ordblks  = 0;  /* not tracked in fast mode - use slow if needed */
++      nm.hblkhd   = m->fast_stats_mmap_sz;
 +      nm.usmblks  = m->max_footprint;
 +      nm.uordblks = used;
 +      nm.fordblks = m->footprint - used;
@@ -104,45 +93,65 @@ index 5cdc6f6cc..4d8b92d20 100644
    struct dlmallinfo nm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
    ensure_initialization();
    if (!PREACTION(m)) {
-@@ -3564,6 +3590,8 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
+@@ -3520,6 +3547,7 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
+     mem = internal_malloc(m, req);
+     if (mem != 0) {
+       mchunkptr p = mem2chunk(mem);
++      size_t original_size = chunksize(p); /* size before splitting */
+       if (PREACTION(m))
+         return 0;
+       if ((((size_t)(mem)) & (alignment - 1)) != 0) { /* misaligned */
+@@ -3564,6 +3592,12 @@ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
          }
        }
  
-+      m->fast_stats_used_sz += chunksize(p);
++      /* internal_malloc already counted original_size bytes, so subtract the excess */
++      size_t actual_size = chunksize(p);
++      m->fast_stats_used_sz -= (original_size - actual_size);
++      if (is_mmapped(p))
++        m->fast_stats_mmap_sz -= (original_size - actual_size);
 +
        mem = chunk2mem(p);
        assert (chunksize(p) >= nb);
        assert(((size_t)mem & (alignment - 1)) == 0);
-@@ -4024,6 +4052,9 @@ static mstate init_user_mstate(char* tbase, size_t tsize) {
+@@ -4024,6 +4058,10 @@ static mstate init_user_mstate(char* tbase, size_t tsize) {
    m->mflags = mparams.default_mflags;
    m->extp = 0;
    m->exts = 0;
 +
-+  m->fast_stats_used_sz = sizeof(struct malloc_state);
++  m->fast_stats_used_sz = chunksize(mem2chunk(m));
++  m->fast_stats_mmap_sz = 0;
 +
    disable_contiguous(m);
    init_bins(m);
    mn = next_chunk(mem2chunk(m));
-@@ -4236,6 +4267,8 @@ void* mspace_get_aligned (mspace msp,
-   if (rv == 0)
-       return rv;
+@@ -4449,6 +4487,13 @@ void* mspace_malloc(mspace msp, size_t bytes) {
+     mem = sys_alloc(ms, nb);
  
-+  ms->fast_stats_used_sz += chunksize(mem2chunk(rv));
-+
-   /* Honor the alignment request */
-   searchp = (unsigned long)(rv + sizeof (unsigned));
- 
-@@ -4474,6 +4507,9 @@ void mspace_free(mspace msp, void* mem) {
+   postaction:
++    if (mem != 0) {
++      mchunkptr p = mem2chunk(mem);
++      size_t psize = chunksize(p);
++      ms->fast_stats_used_sz += psize;
++      if (is_mmapped(p))
++        ms->fast_stats_mmap_sz += psize;
++    }
+     POSTACTION(ms);
+     return mem;
+   }
+@@ -4474,6 +4519,11 @@ void mspace_free(mspace msp, void* mem) {
        check_inuse_chunk(fm, p);
        if (RTCHECK(ok_address(fm, p) && ok_inuse(p))) {
          size_t psize = chunksize(p);
 +
 +        fm->fast_stats_used_sz -= psize;
++        if (is_mmapped(p))
++          fm->fast_stats_mmap_sz -= psize;
 +
          mchunkptr next = chunk_plus_offset(p, psize);
          if (!pinuse(p)) {
            size_t prevsize = p->prev_foot;
-@@ -4604,11 +4640,14 @@ void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
+@@ -4604,11 +4654,17 @@ void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
      }
  #endif /* FOOTERS */
      if (!PREACTION(m)) {
@@ -152,21 +161,23 @@ index 5cdc6f6cc..4d8b92d20 100644
        if (newp != 0) {
          check_inuse_chunk(m, newp);
          mem = chunk2mem(newp);
++        size_t newsize = chunksize(newp);
 +
-+        m->fast_stats_used_sz += chunksize(newp) - oldsize;
++        m->fast_stats_used_sz += newsize - oldsize;
++        if (is_mmapped(newp))
++          m->fast_stats_mmap_sz += newsize - oldsize;
        }
        else {
          mem = mspace_malloc(m, bytes);
-@@ -4616,6 +4655,8 @@ void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
+@@ -4616,6 +4672,7 @@ void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
            size_t oc = chunksize(oldp) - overhead_for(oldp);
            memcpy(mem, oldmem, (oc < bytes)? oc : bytes);
            mspace_free(m, oldmem);
-+
-+          m->fast_stats_used_sz += chunksize(mem2chunk(mem)) - oldsize;
++          /* mspace_malloc and mspace_free already updated stat */
          }
        }
      }
-@@ -4633,6 +4674,7 @@ void* mspace_realloc_in_place(mspace msp, void* oldmem, size_t bytes) {
+@@ -4633,6 +4690,7 @@ void* mspace_realloc_in_place(mspace msp, void* oldmem, size_t bytes) {
      else {
        size_t nb = request2size(bytes);
        mchunkptr oldp = mem2chunk(oldmem);
@@ -174,31 +185,19 @@ index 5cdc6f6cc..4d8b92d20 100644
  #if ! FOOTERS
        mstate m = (mstate)msp;
  #else /* FOOTERS */
-@@ -4649,6 +4691,8 @@ void* mspace_realloc_in_place(mspace msp, void* oldmem, size_t bytes) {
+@@ -4649,6 +4707,11 @@ void* mspace_realloc_in_place(mspace msp, void* oldmem, size_t bytes) {
          if (newp == oldp) {
            check_inuse_chunk(m, newp);
            mem = oldmem;
++          size_t newsize = chunksize(newp);
 +
-+          m->fast_stats_used_sz += chunksize(newp) - oldsize;
++          m->fast_stats_used_sz += newsize - oldsize;
++          if (is_mmapped(newp))
++            m->fast_stats_mmap_sz += newsize - oldsize;
          }
        }
      }
-@@ -4663,8 +4707,12 @@ void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
-     USAGE_ERROR_ACTION(ms,ms);
-     return 0;
-   }
--  if (alignment <= MALLOC_ALIGNMENT)
--    return mspace_malloc(msp, bytes);
-+  if (alignment <= MALLOC_ALIGNMENT) {
-+    void *rv = mspace_malloc(msp, bytes);
-+    if (rv)
-+      ms->fast_stats_used_sz += chunksize(mem2chunk(rv));
-+    return rv;
-+  }
-   return internal_memalign(ms, alignment, bytes);
- }
- 
-@@ -4797,12 +4845,21 @@ size_t mspace_set_footprint_limit(mspace msp, size_t bytes) {
+@@ -4797,12 +4860,21 @@ size_t mspace_set_footprint_limit(mspace msp, size_t bytes) {
  
  #if !NO_MALLINFO
  __clib_nosanitize_addr
@@ -223,15 +222,15 @@ index 5cdc6f6cc..4d8b92d20 100644
  #endif /* NO_MALLINFO */
  
 diff --git a/src/vppinfra/dlmalloc.h b/src/vppinfra/dlmalloc.h
-index 5fcaf7c30..9b4c8f7f9 100644
+index c7d25c704..9b65951ff 100644
 --- a/src/vppinfra/dlmalloc.h
 +++ b/src/vppinfra/dlmalloc.h
 @@ -1421,8 +1421,11 @@ DLMALLOC_EXPORT size_t mspace_max_footprint(mspace msp);
  /*
    mspace_mallinfo behaves as mallinfo, but reports properties of
    the given space.
-+  _slow version iterates over all allocations and provides precise information.
-+  _fast version doesn't provide hblkhd and ordblks information.
++  _slow version iterates over all allocations and provides additional information.
++  _fast version is instant, but doesn't provide hblkhd and ordblks information.
  */
 -DLMALLOC_EXPORT struct dlmallinfo mspace_mallinfo(mspace msp);
 +DLMALLOC_EXPORT struct dlmallinfo mspace_mallinfo_slow(mspace msp);
@@ -240,10 +239,10 @@ index 5fcaf7c30..9b4c8f7f9 100644
  
  /*
 diff --git a/src/vppinfra/mem_dlmalloc.c b/src/vppinfra/mem_dlmalloc.c
-index de7591139..696738e86 100644
+index 40a707b59..9d05cee96 100644
 --- a/src/vppinfra/mem_dlmalloc.c
 +++ b/src/vppinfra/mem_dlmalloc.c
-@@ -457,7 +457,7 @@ format_clib_mem_heap (u8 * s, va_list * va)
+@@ -217,7 +217,7 @@ format_clib_mem_heap (u8 * s, va_list * va)
    if (heap == 0)
      heap = clib_mem_get_heap ();
  
@@ -252,7 +251,7 @@ index de7591139..696738e86 100644
  
    s = format (s, "base %p, size %U",
  	      heap->base, format_memory_size, heap->size);
-@@ -499,19 +499,12 @@ format_clib_mem_heap (u8 * s, va_list * va)
+@@ -264,19 +264,19 @@ format_clib_mem_heap (u8 * s, va_list * va)
  __clib_export __clib_flatten void
  clib_mem_get_heap_usage (clib_mem_heap_t *heap, clib_mem_usage_t *usage)
  {
@@ -262,18 +261,19 @@ index de7591139..696738e86 100644
    usage->bytes_total = mi.arena; /* non-mmapped space allocated from system */
    usage->bytes_used = mi.uordblks;	    /* total allocated space */
    usage->bytes_free = mi.fordblks;	    /* total free space */
--  usage->bytes_used_mmap = mi.hblkhd;	    /* space in mmapped regions */
+   usage->bytes_used_mmap = mi.hblkhd;	    /* space in mmapped regions */
    usage->bytes_max = mi.usmblks;	    /* maximum total allocated space */
 -  usage->bytes_free_reclaimed = mi.ordblks; /* number of free chunks */
--  usage->bytes_overhead = mi.keepcost; /* releasable (via malloc_trim) space */
--
--  /* Not supported */
--  usage->bytes_used_sbrk = 0;
--  usage->object_count = 0;
+   usage->bytes_overhead = mi.keepcost; /* releasable (via malloc_trim) space */
+ 
+   /* Not supported */
+   usage->bytes_used_sbrk = 0;
+   usage->object_count = 0;
++  usage->bytes_free_reclaimed = 0;
  }
  
  /* Call serial number for debugger breakpoints. */
-@@ -613,7 +606,7 @@ clib_mem_destroy_heap (clib_mem_heap_t * h)
+@@ -342,7 +342,7 @@ clib_mem_destroy_heap (clib_mem_heap_t * h)
  __clib_export __clib_flatten uword
  clib_mem_get_heap_free_space (clib_mem_heap_t *h)
  {
@@ -283,5 +283,5 @@ index de7591139..696738e86 100644
  }
  
 -- 
-2.49.0
+2.51.2
 

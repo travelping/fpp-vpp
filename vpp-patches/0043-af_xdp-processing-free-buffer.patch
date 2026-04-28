@@ -1,0 +1,34 @@
+From 94eee1f9c572cccc61e2d399dc062b69a4ba873c Mon Sep 17 00:00:00 2001
+From: Steven Luong <sluong@cisco.com>
+Date: Wed, 9 Jul 2025 15:59:59 -0700
+Subject: [PATCH] af_xdp: processing free buffer
+
+af_xdp does not support big packets and they got dropped.
+When that happens, we need to bump up the buffer pointer
+and decrement packet count prior to going back to the
+while loop.
+
+Type: fix
+
+Change-Id: I4722b15eb7ba5467f37e52ab532998c35caa3e2e
+Signed-off-by: Steven Luong <sluong@cisco.com>
+---
+ src/plugins/af_xdp/output.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/plugins/af_xdp/output.c b/src/plugins/af_xdp/output.c
+index a59c01ca6..00dc0e50c 100644
+--- a/src/plugins/af_xdp/output.c
++++ b/src/plugins/af_xdp/output.c
+@@ -209,6 +209,8 @@ wrap_around:
+ 	      af_xdp_log (VLIB_LOG_LEVEL_ERR, ad,
+ 			  "vlib_buffer_chain_linearize failed");
+ 	      vlib_buffer_free_one (vm, vlib_get_buffer_index (vm, b[0]));
++	      b += 1;
++	      n -= 1;
+ 	      continue;
+ 	    }
+ 	}
+-- 
+2.47.3
+

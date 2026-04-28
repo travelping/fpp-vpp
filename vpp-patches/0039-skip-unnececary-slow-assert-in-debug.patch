@@ -1,0 +1,30 @@
+From 3a0823f4d93a8744e36cee031e03e84378435b69 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Fri, 14 Nov 2025 00:33:23 +0100
+Subject: [PATCH] skip unnececary slow assert in debug
+
+---
+ src/vlib/main.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/vlib/main.c b/src/vlib/main.c
+index 219ed2200..35d0f736c 100644
+--- a/src/vlib/main.c
++++ b/src/vlib/main.c
+@@ -200,11 +200,13 @@ vlib_frame_free (vlib_main_t *vm, vlib_frame_t *f)
+   ASSERT (f->frame_flags & VLIB_FRAME_IS_ALLOCATED);
+ 
+   /* No next frames may point to freed frame. */
++  /*
+   if (CLIB_DEBUG > 0)
+     {
+       vlib_next_frame_t *nf;
+       vec_foreach (nf, vm->node_main.next_frames) ASSERT (nf->frame != f);
+     }
++  */
+ 
+   f->frame_flags &= ~(VLIB_FRAME_IS_ALLOCATED | VLIB_FRAME_NO_APPEND);
+   f->flags = 0;
+-- 
+2.51.2
+
