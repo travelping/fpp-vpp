@@ -1,0 +1,40 @@
+From 91bbaa52757bcb3aaac09d4b39be68770a35d180 Mon Sep 17 00:00:00 2001
+From: Vladimir Zhigulin <vladimir.jigulin@travelping.com>
+Date: Mon, 8 Dec 2025 22:11:14 +0100
+Subject: [PATCH] cli: add VPP_CLI_SOCKET env variable
+
+---
+ src/vpp/app/vppctl.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/vpp/app/vppctl.c b/src/vpp/app/vppctl.c
+index 7166ce136..76250a328 100644
+--- a/src/vpp/app/vppctl.c
++++ b/src/vpp/app/vppctl.c
+@@ -35,6 +35,7 @@
+ #include <arpa/telnet.h>
+ 
+ #define SOCKET_FILE "/run/vpp/cli.sock"
++#define CLI_ENV_NAME "VPP_CLI_SOCKET"
+ 
+ volatile int window_resized = 0;
+ struct termios orig_tio;
+@@ -174,11 +175,14 @@ main (int argc, char *argv[])
+   int is_interactive = 0;
+   int acked = 1;		/* counts messages from VPP; starts at 1 */
+   int sent_ttype = 0;
+-  char *sock_fname = SOCKET_FILE;
++  char *sock_fname = getenv(CLI_ENV_NAME);
+   int sock_fd = -1;
+   int error = 0;
+   int arg = 0;
+ 
++  if (sock_fname == NULL)
++    sock_fname = SOCKET_FILE;
++
+   /* process command line */
+   argc--;
+   argv++;
+-- 
+2.52.0
+

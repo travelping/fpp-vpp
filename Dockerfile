@@ -69,7 +69,7 @@ RUN mkdir -p /vpp-src/build-root/build-test/src && \
     git config --global --add safe.directory /src
 
 # final image starts here
-FROM ubuntu:22.04 AS final-stage
+FROM ubuntu:22.04@sha256:ce4a593b4e323dcc3dd728e397e0a866a1bf516a1b7c31d6aa06991baec4f2e0 AS final-stage
 ARG BUILD_TYPE
 WORKDIR /
 
