@@ -1,0 +1,194 @@
+From 11db9d24d3d99fe0aff83ac8ce73bbe65cc10a65 Mon Sep 17 00:00:00 2001
+From: Marcin Zyla <marcin.zyla@vprocess.pl>
+Date: Tue, 21 Jan 2025 06:19:10 +0100
+Subject: [PATCH] test: metrics
+
+---
+ src/plugins/abf/abf_api.c        |  9 ++++++++
+ src/plugins/abf/abf_itf_attach.c | 37 ++++++++++++++++++++++++++++++--
+ src/plugins/abf/abf_itf_attach.h |  3 +++
+ src/plugins/acl/acl.c            |  7 ++++--
+ src/plugins/acl/dataplane_node.c |  3 +--
+ 5 files changed, 53 insertions(+), 6 deletions(-)
+
+diff --git a/src/plugins/abf/abf_api.c b/src/plugins/abf/abf_api.c
+index ffb32d582..f6e1caf35 100644
+--- a/src/plugins/abf/abf_api.c
++++ b/src/plugins/abf/abf_api.c
+@@ -242,6 +242,15 @@ vl_api_abf_itf_attach_dump_t_handler (vl_api_abf_itf_attach_dump_t * mp)
+ static clib_error_t *
+ abf_api_init (vlib_main_t * vm)
+ {
++
++  clib_error_t *error = 0;
++  remote_acl_main = (acl_main_t*)(vlib_get_plugin_symbol ("acl_plugin.so", "acl_main"));
++
++    if (remote_acl_main == 0)
++    {
++      error = clib_error_return (0, "acl_plugin.so is not loaded");
++      return error;
++    }
+   /* Ask for a correctly-sized block of API message decode slots */
+   abf_base_msg_id = setup_message_id_table ();
+ 
+diff --git a/src/plugins/abf/abf_itf_attach.c b/src/plugins/abf/abf_itf_attach.c
+index a14717e19..f02557747 100644
+--- a/src/plugins/abf/abf_itf_attach.c
++++ b/src/plugins/abf/abf_itf_attach.c
+@@ -16,6 +16,7 @@
+ #include <plugins/abf/abf_itf_attach.h>
+ #include <vnet/fib/fib_path_list.h>
+ #include <plugins/acl/exports.h>
++#include <plugins/acl/acl.h>
+ 
+ /**
+  * Forward declarations;
+@@ -500,6 +501,9 @@ typedef enum
+   ABF_N_ERROR,
+ } abf_error_t;
+ 
++
++acl_main_t *remote_acl_main;
++
+ always_inline uword
+ abf_input_inline (vlib_main_t * vm,
+ 		  vlib_node_runtime_t * node,
+@@ -507,6 +511,9 @@ abf_input_inline (vlib_main_t * vm,
+ {
+   u32 n_left_from, *from, *to_next, next_index, matches, misses;
+ 
++  uword thread_index = os_get_thread_index ();
++  acl_main_t *remote_am = remote_acl_main;
++
+   from = vlib_frame_vector_args (frame);
+   n_left_from = frame->n_vectors;
+   next_index = node->cached_next_index;
+@@ -583,6 +590,28 @@ abf_input_inline (vlib_main_t * vm,
+ 	      vnet_buffer (b0)->ip.adj_index[VLIB_TX] =
+ 		aia0->aia_dpo.dpoi_index;
+ 	      matches++;
++
++
++         if (remote_am->interface_acl_counters_enabled)
++                {
++                        u32 buf_len = vlib_buffer_length_in_chain (vm, b0);
++                        vlib_increment_combined_counter (remote_am->combined_acl_counters +
++                                                        match_acl_index,
++                                                        thread_index,
++                                                        match_rule_index,
++                                                        1,
++                                                        buf_len);
++                        // saved_matched_acl_index = match_acl_in_index;
++                        // saved_matched_ace_index = match_rule_index;
++                        // saved_packet_count = 1;
++                        // saved_byte_count = buf_len;
++                        // /* prefetch the counter that we are going to increment */
++                        // vlib_prefetch_combined_counter (am->combined_acl_counters +
++                        // 			  saved_matched_acl_index,
++                        // 			  thread_index,
++                        // 			  saved_matched_ace_index);
++                }
++
+ 	    }
+ 	  else
+ 	    {
+@@ -603,22 +632,26 @@ abf_input_inline (vlib_main_t * vm,
+ 	      tr->index = vnet_buffer (b0)->ip.adj_index[VLIB_TX];
+ 	    }
+ 
++
++
+ 	  /* verify speculative enqueue, maybe switch current next frame */
+ 	  vlib_validate_buffer_enqueue_x1 (vm, node, next_index,
+ 					   to_next, n_left_to_next, bi0,
+ 					   next0);
++
++
+ 	}
+ 
+       vlib_put_next_frame (vm, node, next_index, n_left_to_next);
+     }
+ 
+   vlib_node_increment_counter (vm,
+-			       (fproto = FIB_PROTOCOL_IP6 ?
++			       (fproto == FIB_PROTOCOL_IP6 ?
+ 				abf_ip4_node.index :
+ 				abf_ip6_node.index),
+ 			       ABF_ERROR_MATCHED, matches);
+   vlib_node_increment_counter (vm,
+-			       (fproto = FIB_PROTOCOL_IP6 ?
++			       (fproto == FIB_PROTOCOL_IP6 ?
+ 				abf_ip4_node.index :
+ 				abf_ip6_node.index),
+ 			       ABF_ERROR_MISSED, misses);
+diff --git a/src/plugins/abf/abf_itf_attach.h b/src/plugins/abf/abf_itf_attach.h
+index 4cb7dddf4..c63124d13 100644
+--- a/src/plugins/abf/abf_itf_attach.h
++++ b/src/plugins/abf/abf_itf_attach.h
+@@ -18,7 +18,10 @@
+ 
+ #include <plugins/abf/abf_policy.h>
+ #include <vnet/fib/fib_path_list.h>
++#include <plugins/acl/exports.h>
+ 
++
++extern acl_main_t * remote_acl_main;
+ /**
+  * Attachment data for an ABF policy to an interface
+  */
+diff --git a/src/plugins/acl/acl.c b/src/plugins/acl/acl.c
+index f834425b5..baa4e12c0 100644
+--- a/src/plugins/acl/acl.c
++++ b/src/plugins/acl/acl.c
+@@ -40,7 +40,7 @@
+ #include "fa_node.h"
+ #include "public_inlines.h"
+ 
+-acl_main_t acl_main;
++__clib_export acl_main_t acl_main;
+ 
+ #define REPLY_MSG_ID_BASE am->msg_id_base
+ #include <vlibapi/api_helper_macros.h>
+@@ -298,6 +298,8 @@ validate_and_reset_acl_counters (acl_main_t * am, u32 acl_index)
+ 
+   /* (re)validate for the actual ACL that is getting added/updated */
+   i32 rule_count = vec_len (am->acls[acl_index].rules);
++
++  am->interface_acl_counters_enabled = 1;
+   /* Validate one extra so we always have at least one counter for an ACL */
+   vlib_validate_combined_counter (&am->combined_acl_counters[acl_index],
+ 				  rule_count);
+@@ -416,6 +418,7 @@ acl_add_list (u32 count, vl_api_acl_rule_t rules[],
+       /* a change in an ACLs if they are applied may mean a new policy epoch */
+       policy_notify_acl_change (am, *acl_list_index);
+     }
++    
+   validate_and_reset_acl_counters (am, *acl_list_index);
+   acl_plugin_lookup_context_notify_acl_change (*acl_list_index);
+   return 0;
+@@ -3510,7 +3513,7 @@ acl_show_aclplugin_tables_fn (vlib_main_t * vm,
+       show_applied_info = 1;
+       show_bihash = 1;
+     }
+-  vlib_cli_output (vm, "Stats counters enabled for interface ACLs: %d",
++  vlib_cli_output (vm, "Stats counters enabled for interface ACLs!!!!!!!: %d",
+ 		   acl_main.interface_acl_counters_enabled);
+   vlib_cli_output (vm, "Use hash-based lookup for ACLs: %d",
+ 		   acl_main.use_hash_acl_matching);
+diff --git a/src/plugins/acl/dataplane_node.c b/src/plugins/acl/dataplane_node.c
+index 4bef8f077..ed7c2d1fd 100644
+--- a/src/plugins/acl/dataplane_node.c
++++ b/src/plugins/acl/dataplane_node.c
+@@ -479,8 +479,7 @@ acl_fa_inner_node_fn (vlib_main_t * vm,
+ 							     &match_acl_in_index,
+ 							     &match_rule_index,
+ 							     &trace_bitmap);
+-	      if (PREDICT_FALSE
+-		  (is_match && am->interface_acl_counters_enabled))
++	      if (is_match && am->interface_acl_counters_enabled)
+ 		{
+ 		  u32 buf_len = vlib_buffer_length_in_chain (vm, b[0]);
+ 		  vlib_increment_combined_counter (am->combined_acl_counters +
+-- 
+2.48.1
+
